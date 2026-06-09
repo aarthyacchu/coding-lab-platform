@@ -8,14 +8,16 @@ import { db } from '../../services/firebase'
 import { useSession } from '../../hooks/useSession'
 import SessionTimer from '../../components/SessionTimer'
 import { Play, Send, ChevronLeft, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { useProctor } from '../../hooks/useProctor'
+import ViolationBanner from '../../components/ViolationBanner'
 
 export default function Session() {
-  const { programId }  = useParams()
-  const navigate       = useNavigate()
-  const user           = getAuth().currentUser
-  const [program,      setProgram]      = useState(null)
-  const [loading,      setLoading]      = useState(true)
-  const [submitConfirm,setSubmitConfirm]= useState(false)
+  const { programId } = useParams()
+  const navigate = useNavigate()
+  const user = getAuth().currentUser
+  const [program, setProgram] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [submitConfirm, setSubmitConfirm] = useState(false)
 
   useEffect(() => {
     async function loadProgram() {
@@ -30,6 +32,17 @@ export default function Session() {
     sessionId, code, setCode, output, runCount,
     isRunning, isSaving, elapsed, handleRun, saveAndFinalize,
   } = useSession(user, program)
+  const {
+    violations,
+    isFlagged,
+    isFullscreen,
+    showBanner,
+    lastViolation,
+    logViolation,
+    dismissBanner,
+    enterFullscreen,
+  } = useProctor(sessionId)
+
 
   async function handleSubmit() {
     if (!submitConfirm) { setSubmitConfirm(true); return }
@@ -60,16 +73,47 @@ export default function Session() {
       <p className='text-red-400'>Program not found.</p>
     </div>
   )
+  if (!isFullscreen) {
+    return (
+      <div className='min-h-screen bg-gray-900 flex items-center justify-center p-6'>
+        <div className='max-w-md w-full bg-gray-800 rounded-xl p-6 text-center'>
+          <h2 className='text-xl font-bold text-white mb-4'>
+            Proctored Session
+          </h2>
 
+          <p className='text-gray-300 mb-6'>
+            This coding session requires fullscreen mode.
+            Leaving fullscreen, switching tabs, copying,
+            or pasting will be recorded as violations.
+          </p>
+
+          <button
+            onClick={enterFullscreen}
+            className='w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium'
+          >
+            Enter Fullscreen & Start Session
+          </button>
+        </div>
+      </div>
+    )
+  }
   return (
-    <div className='h-screen flex flex-col bg-gray-900 overflow-hidden'>
-
+    <div className='h-screen flex flex-col bg-gray-900 overflow-hidden pt-14'>
+      {showBanner && lastViolation && (
+  <ViolationBanner
+    violation={lastViolation}
+    isFlagged={isFlagged}
+    isFullscreen={isFullscreen}
+    onDismiss={dismissBanner}
+    onReEnterFullscreen={enterFullscreen}
+  />
+)}
       {/* ── HEADER BAR ── */}
       <header className='flex items-center justify-between px-4 py-2.5
                          bg-gray-800 border-b border-gray-700 flex-shrink-0'>
         <div className='flex items-center gap-3'>
           <button onClick={() => navigate('/student/programs')}
-                  className='text-gray-400 hover:text-white transition'>
+            className='text-gray-400 hover:text-white transition'>
             <ChevronLeft size={18} />
           </button>
           <div>
@@ -80,18 +124,18 @@ export default function Session() {
         <SessionTimer elapsed={elapsed} isSaving={isSaving} />
         <div className='flex items-center gap-2'>
           <button onClick={handleRun} disabled={isRunning}
-                  className='flex items-center gap-1.5 bg-green-600 hover:bg-green-700
+            className='flex items-center gap-1.5 bg-green-600 hover:bg-green-700
                              disabled:bg-green-900 disabled:text-green-600
                              text-white text-sm font-medium px-4 py-1.5 rounded-lg transition'>
             <Play size={14} fill='currentColor' />
             {isRunning ? 'Running...' : 'Run'}
           </button>
           <button onClick={handleSubmit}
-                  className={`flex items-center gap-1.5 text-sm font-medium px-4 py-1.5
+            className={`flex items-center gap-1.5 text-sm font-medium px-4 py-1.5
                               rounded-lg transition
                               ${submitConfirm
-                                ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
             <Send size={14} />
             {submitConfirm ? 'Confirm Submit' : 'Submit'}
           </button>
@@ -106,7 +150,11 @@ export default function Session() {
           <div className='flex items-center justify-between px-4 py-1.5
                           bg-gray-800 border-b border-gray-700'>
             <span className='text-xs text-gray-400 font-medium'>main.py</span>
-            <span className='text-xs text-gray-500'>Runs: {runCount}</span>
+            <span className='text-xs text-gray-500'>
+              <span className="px-2 py-1 rounded bg-red-500 text-white text-xs">
+                Violations: {violations.length}
+              </span>
+            </span>
           </div>
           <div className='flex-1'>
             <Editor
@@ -116,7 +164,34 @@ export default function Session() {
               value={code}
               onChange={val => setCode(val || '')}
               options={editorOptions}
-              onMount={editor => editor.focus()}
+              onMount={(editor, monaco) => {
+                editor.focus()
+
+                // Block Ctrl+V — paste attempt
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+                  logViolation('paste_attempt')
+                  // Do nothing — paste is suppressed
+                })
+
+                // Block Ctrl+C — copy attempt
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+                  logViolation('copy_attempt')
+                  // Do nothing — copy is suppressed
+                })
+
+                // Block Ctrl+X — cut attempt (treat as copy)
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+                  logViolation('copy_attempt')
+                  // Do nothing — cut is suppressed
+                })
+
+                // Intercept paste via editor API (catches right-click Paste)
+                editor.onDidPaste(() => {
+                  // Undo the paste immediately
+                  editor.trigger('keyboard', 'undo', null)
+                  logViolation('paste_attempt')
+                })
+              }}
             />
           </div>
         </div>
@@ -131,7 +206,7 @@ export default function Session() {
             {output && (
               output.exitCode === 0
                 ? <CheckCircle size={13} className='text-green-500 ml-auto' />
-                : <XCircle    size={13} className='text-red-500 ml-auto' />
+                : <XCircle size={13} className='text-red-500 ml-auto' />
             )}
           </div>
           <div className='flex-1 overflow-y-auto p-4 font-mono text-sm'>
