@@ -8,6 +8,7 @@ import { auth, db } from './services/firebase'
 import Login           from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary  from './pages/student/ProgramLibrary'
+import Session         from './pages/student/Session'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import ProtectedRoute  from './components/ProtectedRoute'
 
@@ -57,6 +58,11 @@ export default function App() {
         <Route path='/student/programs' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
             <ProgramLibrary />
+          </ProtectedRoute>
+        } />
+        <Route path='/student/session/:programId' element={
+          <ProtectedRoute user={user} role={role} requiredRole='student'>
+            <Session />
           </ProtectedRoute>
         } />
 
