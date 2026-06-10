@@ -10,42 +10,42 @@ function generateSessionId(studentId, programId) {
 }
 
 export function useSession(user, program) {
-  const [sessionId,    setSessionId]    = useState(null)
-  const [code,         setCode]         = useState(program?.starterCode || '')
-  const [output,       setOutput]       = useState(null)
-  const [runCount,     setRunCount]     = useState(0)
-  const [errors,       setErrors]       = useState([])
-  const [isRunning,    setIsRunning]    = useState(false)
-  const [isSaving,     setIsSaving]     = useState(false)
+  const [sessionId, setSessionId] = useState(null)
+  const [code, setCode] = useState(program?.starterCode || '')
+  const [output, setOutput] = useState(null)
+  const [runCount, setRunCount] = useState(0)
+  const [errors, setErrors] = useState([])
+  const [isRunning, setIsRunning] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [sessionStart, setSessionStart] = useState(null)
-  const [elapsed,      setElapsed]      = useState(0)
+  const [elapsed, setElapsed] = useState(0)
 
-  const codeRef   = useRef(code)
+  const codeRef = useRef(code)
   const errorsRef = useRef(errors)
-  useEffect(() => { codeRef.current = code },     [code])
+  useEffect(() => { codeRef.current = code }, [code])
   useEffect(() => { errorsRef.current = errors }, [errors])
 
   // Create Firestore session doc on mount
   useEffect(() => {
     if (!user || !program) return
     async function createSession() {
-      const id    = generateSessionId(user.uid, program.id)
+      const id = generateSessionId(user.uid, program.id)
       const start = new Date()
       setSessionId(id)
       setSessionStart(start)
       await setDoc(doc(db, 'sessions', id), {
-        sessionId:   id,
-        studentId:   user.uid,
-        programId:   program.id,
-        startedAt:   serverTimestamp(),
-        status:      'active',
-        finalCode:   program?.starterCode || '',
+        sessionId: id,
+        studentId: user.uid,
+        programId: program.id,
+        startedAt: serverTimestamp(),
+        status: 'active',
+        finalCode: program?.starterCode || '',
         runAttempts: 0,
-        errors:      [],
-        hintsUsed:   0,
-        violations:  [],
-        quizScore:   0,
-        flagged:     false,
+        errors: [],
+        hintsUsed: 0,
+        violations: [],
+        quizScore: 0,
+        flagged: false,
       })
     }
     createSession()
@@ -67,8 +67,8 @@ export function useSession(user, program) {
       try {
         setIsSaving(true)
         await updateDoc(doc(db, 'sessions', sessionId), {
-          finalCode:   codeRef.current,
-          errors:      errorsRef.current,
+          finalCode: codeRef.current,
+          errors: errorsRef.current,
           runAttempts: runCount,
         })
       } catch (err) {
@@ -91,10 +91,10 @@ export function useSession(user, program) {
       setRunCount(prev => prev + 1)
       if (result.stderr) {
         setErrors(prev => [...prev, {
-          message:   result.stderr,
-          type:      result.exitCode !== 0 ? 'runtime' : 'warning',
+          message: result.stderr,
+          type: result.exitCode !== 0 ? 'runtime' : 'warning',
           timestamp: new Date().toISOString(),
-          attempt:   runCount + 1,
+          attempt: runCount + 1,
         }])
       }
     } catch (err) {
@@ -105,14 +105,15 @@ export function useSession(user, program) {
   }, [code, isRunning, runCount])
 
   // Final save before submit
-  const saveAndFinalize = useCallback(async () => {
+  const saveAndFinalize = useCallback(async (hintsUsed = 0) => {
     if (!sessionId) return
     await updateDoc(doc(db, 'sessions', sessionId), {
-      finalCode:   codeRef.current,
-      errors:      errorsRef.current,
+      finalCode: codeRef.current,
+      errors: errorsRef.current,
       runAttempts: runCount,
+      hintsUsed: hintsUsed,
       timeTakenMs: elapsed * 1000,
-      status:      'quiz_pending',
+      status: 'quiz_pending',
     })
   }, [sessionId, runCount, elapsed])
 

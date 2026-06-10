@@ -28,12 +28,52 @@ export async function runCode(code, language) {
   return res.json()
 }
 
-export async function getHint(programId, userCode) {
-  const res = await fetch(`${BASE}/hints/ask`, {
-    method: 'POST',
+// export async function getHint(programId, userCode) {
+//   const res = await fetch(`${BASE}/hints/ask`, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ programId, userCode })
+//   })
+//   if (!res.ok) throw new Error('Failed to get hint')
+//   return res.json()
+// }
+
+// Add these two functions to the END of frontend/src/services/api.js
+
+export async function getHint(programId, programTitle, programDesc, concepts, userCode, hintNumber) {
+  const res = await fetch('/api/hints/ask', {
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ programId, userCode })
+    body: JSON.stringify({
+      programId,
+      programTitle,
+      programDesc,
+      concepts,
+      userCode,
+      hintNumber
+    })
   })
-  if (!res.ok) throw new Error('Failed to get hint')
-  return res.json()
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Failed to get hint')
+  }
+  return res.json()   // { hint: string, hintsRemaining: number }
+}
+
+export async function generateQuiz(programTitle, programDesc, concepts, studentCode) {
+  const res = await fetch('/api/quiz/generate', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      programTitle,
+      programDesc,
+      concepts,
+      studentCode
+    })
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Quiz generation failed')
+  }
+  return res.json()   // { questions: [...] }
 }

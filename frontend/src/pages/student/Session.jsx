@@ -10,6 +10,8 @@ import SessionTimer from '../../components/SessionTimer'
 import { Play, Send, ChevronLeft, CheckCircle, XCircle, Terminal } from 'lucide-react'
 import { useProctor } from '../../hooks/useProctor'
 import ViolationBanner from '../../components/ViolationBanner'
+import HintPanel from '../../components/HintPanel'
+import { Lightbulb } from 'lucide-react'  // add Lightbulb to the lucide import
 
 export default function Session() {
   const { programId } = useParams()
@@ -18,6 +20,8 @@ export default function Session() {
   const [program, setProgram] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitConfirm, setSubmitConfirm] = useState(false)
+  const [showHints, setShowHints] = useState(false)
+  const [hintsUsed, setHintsUsed] = useState(0)
 
   useEffect(() => {
     async function loadProgram() {
@@ -45,11 +49,21 @@ export default function Session() {
 
 
   async function handleSubmit() {
-    if (!submitConfirm) { setSubmitConfirm(true); return }
-    await saveAndFinalize()
-    navigate('/student/programs')   // Day 4: navigate to quiz instead
-  }
+    if (!submitConfirm) {
+      setSubmitConfirm(true)
+      return
+    }
 
+    await saveAndFinalize(hintsUsed)
+
+    navigate('/student/quiz', {
+      state: {
+        sessionId,
+        program,
+        studentCode: code,
+      }
+    })
+  }
   const editorOptions = {
     fontSize: 14,
     fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
@@ -100,14 +114,14 @@ export default function Session() {
   return (
     <div className='h-screen flex flex-col bg-gray-900 overflow-hidden pt-14'>
       {showBanner && lastViolation && (
-  <ViolationBanner
-    violation={lastViolation}
-    isFlagged={isFlagged}
-    isFullscreen={isFullscreen}
-    onDismiss={dismissBanner}
-    onReEnterFullscreen={enterFullscreen}
-  />
-)}
+        <ViolationBanner
+          violation={lastViolation}
+          isFlagged={isFlagged}
+          isFullscreen={isFullscreen}
+          onDismiss={dismissBanner}
+          onReEnterFullscreen={enterFullscreen}
+        />
+      )}
       {/* ── HEADER BAR ── */}
       <header className='flex items-center justify-between px-4 py-2.5
                          bg-gray-800 border-b border-gray-700 flex-shrink-0'>
@@ -129,6 +143,22 @@ export default function Session() {
                              text-white text-sm font-medium px-4 py-1.5 rounded-lg transition'>
             <Play size={14} fill='currentColor' />
             {isRunning ? 'Running...' : 'Run'}
+          </button>
+
+          <button
+            onClick={() => setShowHints(true)}
+            disabled={hintsUsed >= 3}
+            className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5
+    rounded-lg transition-colors
+    ${hintsUsed >= 3
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
+              }`}
+          >
+            <Lightbulb size={14} />
+            {hintsUsed >= 3
+              ? 'No hints'
+              : `Hint (${3 - hintsUsed} left)`}
           </button>
           <button onClick={handleSubmit}
             className={`flex items-center gap-1.5 text-sm font-medium px-4 py-1.5
@@ -259,6 +289,16 @@ export default function Session() {
           </div>
         </div>
       </div>
+
+      {showHints && (
+        <HintPanel
+          program={program}
+          code={code}
+          hintsUsed={hintsUsed}
+          onHintUsed={() => setHintsUsed(prev => prev + 1)}
+          onClose={() => setShowHints(false)}
+        />
+      )}
     </div>
   )
 }

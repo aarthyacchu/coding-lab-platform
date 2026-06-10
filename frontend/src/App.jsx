@@ -5,16 +5,17 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './services/firebase'
 
-import Login           from './pages/Login'
+import Login from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
-import ProgramLibrary  from './pages/student/ProgramLibrary'
-import Session         from './pages/student/Session'
+import ProgramLibrary from './pages/student/ProgramLibrary'
+import Session from './pages/student/Session'
+import Quiz from './pages/student/Quiz'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
-import ProtectedRoute  from './components/ProtectedRoute'
+import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
-  const [user, setUser]     = useState(null)
-  const [role, setRole]     = useState(null)   // 'student' | 'teacher'
+  const [user, setUser] = useState(null)
+  const [role, setRole] = useState(null)   // 'student' | 'teacher'
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -63,6 +64,12 @@ export default function App() {
         <Route path='/student/session/:programId' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
             <Session />
+          </ProtectedRoute>
+        } />
+
+        <Route path='/student/quiz' element={
+          <ProtectedRoute user={user} role={role} requiredRole='student'>
+            <Quiz />
           </ProtectedRoute>
         } />
 
