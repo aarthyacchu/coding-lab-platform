@@ -13,6 +13,109 @@ load_dotenv()
 
 groq_client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 
+BADGE_DEFINITIONS = {
+    'first_program':  {'name': 'First Program',  'icon': '🏅'},
+    'no_hints':       {'name': 'No Hints',        'icon': '🧠'},
+    'perfect_quiz':   {'name': 'Perfect Quiz',    'icon': '⭐'},
+    'five_streak':    {'name': '5-Day Streak',    'icon': '🔥'},
+    'debugger':       {'name': 'Debugger',        'icon': '🐛'},
+    'speed_run':      {'name': 'Speed Run',       'icon': '⚡'},
+    'lab_complete':   {'name': 'Lab Complete',    'icon': '📚'},
+    'clean_code':     {'name': 'Clean Code',      'icon': '🎯'},
+}
+
+
+def check_and_award_badges(db, student_id: str, session: dict, total_programs: int) -> list:
+    """
+    Checks all badge conditions for this student after a submission.
+    Returns list of newly earned badge IDs.
+    """
+    user_ref = db.collection('users').document(student_id)
+    user_doc = user_ref.get()
+    user     = user_doc.to_dict()
+    existing_badges = set(user.get('badges', []))
+    newly_earned    = []
+
+    all_sessions = db.collection('sessions') \
+        .where('studentId', '==', student_id) \
+        .where('status', '==', 'complete') \
+        .get()
+    completed_sessions = [s.to_dict() for s in all_sessions]
+
+    def award(badge_id):
+        if badge_id not in existing_badges:
+            newly_earned.append(badge_id)
+            existing_badges.add(badge_id)
+
+    if len(completed_sessions) >= 1:
+        award('first_program')
+
+    if session.get('hintsUsed', 0) == 0:
+        award('no_hints')
+
+    if session.get('quizScore', 0) >= 1.0:
+        award('perfect_quiz')
+
+    if user.get('streak', 0) >= 5:
+        award('five_streak')
+
+    if len(session.get('errors', [])) >= 3 and session.get('report', {}) \
+            .get('performanceTier') != 'needs_attention':
+        award('debugger')
+
+    time_min = session.get('timeTakenMs', 0) / 60000
+    if 0 < time_min < 20:
+        award('speed_run')
+
+    unique_programs_done = len(set(s.get('programId') for s in completed_sessions))
+    if unique_programs_done >= total_programs and total_programs > 0:
+        award('lab_complete')
+
+    if len(session.get('violations', [])) == 0:
+        award('clean_code')
+
+    if newly_earned:
+        user_ref.update({'badges': list(existing_badges)})
+        print(f'[Pipeline] Awarded badges to {student_id}: {newly_earned}')
+
+    return newly_earned
+
+
+def update_streak(db, student_id: str) -> int:
+    """
+    Updates streak based on lab submissions.
+    Increments on a new day; resets to 1 if gap exceeds 2 days.
+    """
+    from datetime import datetime, timezone
+
+    user_ref = db.collection('users').document(student_id)
+    user_doc = user_ref.get()
+    user     = user_doc.to_dict()
+
+    now            = datetime.now(timezone.utc)
+    last_session   = user.get('lastSessionDate')
+    current_streak = user.get('streak', 0)
+
+    if last_session is None:
+        new_streak = 1
+    else:
+        last_date = last_session
+        days_gap  = (now.date() - last_date.date()).days
+
+        if days_gap == 0:
+            new_streak = current_streak
+        elif days_gap <= 2:
+            new_streak = current_streak + 1
+        else:
+            new_streak = 1
+
+    user_ref.update({
+        'streak':          new_streak,
+        'lastSessionDate': now,
+    })
+
+    return new_streak
+
 
 def get_groq_summary(prompt: str) -> str:
     """Call Groq to convert ML analysis into plain-English teacher summary."""
@@ -115,6 +218,21 @@ def run_pipeline(session_id: str):
             },
             'flagged': plagiarism_result['plagiarismFlagged'],
         })
+
+        print(f'[Pipeline] Updating streak...')
+        new_streak = update_streak(db, session.get('studentId'))
+
+        print(f'[Pipeline] Checking badges...')
+        programs_snap  = db.collection('programs').where('active', '==', True).get()
+        total_programs = len(programs_snap)
+
+        updated_session = session_ref.get().to_dict()
+
+        newly_earned = check_and_award_badges(
+            db, session.get('studentId'), updated_session, total_programs
+        )
+
+        print(f'[Pipeline] Streak: {new_streak}, New badges: {newly_earned}')
 
         print(f'[Pipeline] Complete for session: {session_id}')
 

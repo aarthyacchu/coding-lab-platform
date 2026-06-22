@@ -173,10 +173,10 @@ export default function Session() {
       </header>
 
       {/* ── SPLIT LAYOUT ── */}
-      <div className='flex flex-1 overflow-hidden'>
+      <div className='flex flex-1 overflow-hidden flex-col md:flex-row'>
 
         {/* LEFT — Monaco Editor */}
-        <div className='flex flex-col' style={{ width: '55%' }}>
+        <div className='flex flex-col w-full md:w-[55%] h-1/2 md:h-full'>
           <div className='flex items-center justify-between px-4 py-1.5
                           bg-gray-800 border-b border-gray-700'>
             <span className='text-xs text-gray-400 font-medium'>main.py</span>
@@ -226,10 +226,10 @@ export default function Session() {
           </div>
         </div>
 
-        <div className='w-px bg-gray-700 flex-shrink-0' />
+        <div className='hidden md:block w-px bg-gray-700 flex-shrink-0' />
 
         {/* RIGHT — Output Panel */}
-        <div className='flex flex-col bg-gray-900' style={{ width: '45%' }}>
+        <div className='flex flex-col bg-gray-900 w-full md:w-[45%] h-1/2 md:h-full'>
           <div className='flex items-center gap-2 px-4 py-1.5 bg-gray-800 border-b border-gray-700'>
             <Terminal size={13} className='text-gray-400' />
             <span className='text-xs text-gray-400 font-medium'>Output</span>

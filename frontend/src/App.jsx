@@ -12,6 +12,7 @@ import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import StudentReport from './pages/teacher/StudentReport'
+import ClassAnalytics from './pages/teacher/ClassAnalytics'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -83,6 +84,11 @@ export default function App() {
         <Route path='/teacher/report/:sessionId' element={
           <ProtectedRoute user={user} role={role} requiredRole='teacher'>
             <StudentReport />
+          </ProtectedRoute>
+        } />
+        <Route path='/teacher/analytics' element={
+          <ProtectedRoute user={user} role={role} requiredRole='teacher'>
+            <ClassAnalytics />
           </ProtectedRoute>
         } />
 

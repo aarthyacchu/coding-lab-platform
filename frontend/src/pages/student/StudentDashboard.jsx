@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../../services/firebase'
 import Navbar from '../../components/Navbar'
+import BadgeGrid from '../../components/BadgeGrid'
 import { Flame, Medal, BookOpen, ChevronRight } from 'lucide-react'
 
 export default function StudentDashboard({ user }) {
@@ -42,7 +43,7 @@ export default function StudentDashboard({ user }) {
         </div>
 
         {/* Stats row */}
-        <div className='grid grid-cols-3 gap-4 mb-8'>
+        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
           <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
             <div className='flex items-center gap-2 mb-1'>
               <Flame className='text-orange-500' size={18} />
@@ -71,6 +72,12 @@ export default function StudentDashboard({ user }) {
             <p className='text-3xl font-bold text-gray-800'>0</p>
             <p className='text-xs text-gray-400 mt-0.5'>completed</p>
           </div>
+        </div>
+
+        {/* Badge Grid */}
+        <div className='bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-8'>
+          <h2 className='font-semibold text-gray-700 text-sm mb-4'>Your Badges</h2>
+          <BadgeGrid earnedBadges={profile?.badges || []} />
         </div>
 
         {/* Start lab CTA */}

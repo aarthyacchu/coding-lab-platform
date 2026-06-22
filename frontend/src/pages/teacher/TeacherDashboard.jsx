@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import Navbar from '../../components/Navbar'
-import { Users, BookOpen, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Users, BookOpen, AlertTriangle, CheckCircle, BarChart3 } from 'lucide-react'
 
 export default function TeacherDashboard({ user }) {
   const navigate = useNavigate()
@@ -52,10 +52,21 @@ export default function TeacherDashboard({ user }) {
     <div className='min-h-screen bg-gray-50'>
       <Navbar user={user} role='teacher' />
       <main className='max-w-5xl mx-auto px-4 py-8'>
-        <h1 className='text-2xl font-bold text-gray-800 mb-1'>Teacher Dashboard</h1>
-        <p className='text-gray-500 text-sm mb-8'>
-          Class overview and student performance insights.
-        </p>
+        <div className='flex items-center justify-between mb-8'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-800 mb-1'>Teacher Dashboard</h1>
+            <p className='text-gray-500 text-sm'>
+              Class overview and student performance insights.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/teacher/analytics')}
+            className='flex items-center gap-1.5 text-sm font-medium text-blue-600
+                       hover:text-blue-700 transition-colors'
+          >
+            <BarChart3 size={15} /> View Class Analytics
+          </button>
+        </div>
 
         {loading ? (
           <p className='text-gray-400'>Loading stats...</p>

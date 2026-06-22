@@ -39,6 +39,9 @@ create_user('student1@lab.com', 'student123', 'Arjun Patel',
 create_user('student2@lab.com', 'student123', 'Priya Nair',
             'student', {'rollNumber': 'CS002', 'department': 'CSE', 'year': 2})
 
+create_user('student3@lab.com', 'student123', 'Rohan Mehta',
+            'student', {'rollNumber': 'CS003', 'department': 'CSE', 'year': 2})
+
 # ── Create sample programs ──
 programs = [
     {
@@ -70,6 +73,26 @@ programs = [
         'hintLimit':   3,
         'active':      True,
         'starterCode': 'def factorial(n):\n    # your code here\n    pass',
+    },
+    {
+        'title':       'Bubble Sort',
+        'description': 'Sort a list of integers using the bubble sort algorithm.',
+        'language':    'python',
+        'difficulty':  'medium',
+        'concepts':    ['loops', 'arrays', 'logic'],
+        'hintLimit':   3,
+        'active':      True,
+        'starterCode': 'arr = list(map(int, input().split()))\n# your code here',
+    },
+    {
+        'title':       'Palindrome Checker',
+        'description': 'Check whether a given string is a palindrome.',
+        'language':    'python',
+        'difficulty':  'easy',
+        'concepts':    ['strings', 'logic'],
+        'hintLimit':   3,
+        'active':      True,
+        'starterCode': 's = input()\n# your code here',
     },
 ]
 
