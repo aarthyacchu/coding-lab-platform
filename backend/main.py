@@ -1,11 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routes import session
+import os
+import firebase_admin
+from firebase_admin import credentials
 
+# Load environment variables FIRST
 load_dotenv()
 
-from routes import programs, session, hints, quiz
+# Initialize Firebase Admin SDK BEFORE importing routes
+if not firebase_admin._apps:
+    firebase_key_path = os.getenv('FIREBASE_KEY_PATH', 'config/firebase_key.json')
+    cred = credentials.Certificate(firebase_key_path)
+    firebase_admin.initialize_app(cred)
+
+# Now import routes (they can safely use firestore.client())
+from routes import programs, session, hints, quiz, reports
 
 app = FastAPI(title="CodeLab API", version="1.0.0")
 
@@ -21,6 +31,7 @@ app.include_router(programs.router, prefix="/api")
 app.include_router(session.router, prefix="/api")
 app.include_router(hints.router, prefix="/api")
 app.include_router(quiz.router, prefix='/api')
+app.include_router(reports.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():

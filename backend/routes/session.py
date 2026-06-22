@@ -4,9 +4,10 @@ import tempfile
 import os
 import time
 from fastapi import APIRouter, BackgroundTasks
+from firebase_admin import firestore
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-
+from jobs.pipeline import run_pipeline
 router = APIRouter()
 
 # ── Request / Response models ──────────────────────────────────
@@ -94,10 +95,37 @@ def run_code(req: RunCodeRequest):
     return RunCodeResponse(**result)
 
 
-@router.post('/session/submit')
-def submit_session(req: SubmitSessionRequest, background_tasks: BackgroundTasks):
-    # TODO Day 5: background_tasks.add_task(run_pipeline, req.sessionId)
-    return {
-        'status': 'submitted',
-        'message': 'Session received. Report will be ready within 45 minutes.'
-    }
+@router.post("/session/submit")
+def submit_session(
+    req: SubmitSessionRequest,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Called when student finishes the quiz.
+    Marks session as submitted and queues the ML pipeline
+    as a background task — returns immediately to the student.
+    """
+    try:
+        print(f"[Submit] Received submission for session: {req.sessionId}")
+        
+        # Update status in Firestore immediately
+        db = firestore.client()
+        db.collection('sessions').document(req.sessionId).update({
+            'status': 'submitted'
+        })
+        
+        print(f"[Submit] Session {req.sessionId} marked as submitted in Firestore")
+        
+        # Run pipeline in background — student doesn't wait for this
+        background_tasks.add_task(run_pipeline, req.sessionId)
+        
+        print(f"[Submit] Pipeline queued for session: {req.sessionId}")
+        
+        return {
+            'status':  'submitted',
+            'message': 'Session received. Report will be ready within 45 minutes.'
+        }
+    
+    except Exception as e:
+        print(f"[Submit] ERROR: {str(e)}")
+        raise

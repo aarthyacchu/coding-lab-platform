@@ -1,17 +1,20 @@
 // frontend/src/pages/teacher/TeacherDashboard.jsx
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import Navbar from '../../components/Navbar'
 import { Users, BookOpen, AlertTriangle, CheckCircle } from 'lucide-react'
 
 export default function TeacherDashboard({ user }) {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalSessions: 0,
     flagged: 0,
     reportsReady: 0,
   })
+  const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,14 +25,24 @@ export default function TeacherDashboard({ user }) {
 
       // Count sessions
       const sessionSnap = await getDocs(collection(db, 'sessions'))
-      const sessions = sessionSnap.docs.map(d => d.data())
+      const sessionsData = sessionSnap.docs.map(d => d.data())
 
       setStats({
         totalStudents: studentSnap.size,
-        totalSessions: sessions.length,
-        flagged:       sessions.filter(s => s.flagged).length,
-        reportsReady:  sessions.filter(s => s.status === 'complete').length,
+        totalSessions: sessionsData.length,
+        flagged:       sessionsData.filter(s => s.flagged).length,
+        reportsReady:  sessionsData.filter(s => s.status === 'complete').length,
       })
+
+      // Fetch recent sessions for the table
+      try {
+        const res = await fetch('http://localhost:8000/api/reports/sessions/recent')
+        const data = await res.json()
+        setSessions(data.sessions || [])
+      } catch (e) {
+        console.warn('Could not load sessions:', e)
+      }
+
       setLoading(false)
     }
     loadStats()
@@ -66,13 +79,68 @@ export default function TeacherDashboard({ user }) {
           </div>
         )}
 
-        {/* Placeholder for student list — Day 5 will fill this */}
-        <div className='bg-white rounded-xl p-6 border border-gray-100 shadow-sm'>
-          <h2 className='font-semibold text-gray-700 mb-3'>Recent Sessions</h2>
-          <p className='text-sm text-gray-400'>
-            Student reports will appear here after sessions are submitted.
-            (Populated in Day 5 when the ML pipeline is connected.)
-          </p>
+        {/* Recent Sessions Table */}
+        <div className='bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden'>
+          <div className='px-6 py-4 border-b border-gray-100'>
+            <h2 className='font-semibold text-gray-700'>Recent Sessions</h2>
+          </div>
+          {sessions.length === 0 ? (
+            <div className='p-6 text-center text-gray-400 text-sm'>
+              No sessions yet. Reports appear here after students submit.
+            </div>
+          ) : (
+            <table className='w-full text-sm'>
+              <thead className='bg-gray-50'>
+                <tr>
+                  {['Student ID','Program','Status','Quiz Score','Hints','Flagged',''].map(h => (
+                    <th key={h} className='px-4 py-3 text-left text-xs font-medium
+                                            text-gray-500 uppercase tracking-wide'>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-gray-100'>
+                {sessions.map(s => (
+                  <tr key={s.sessionId} className='hover:bg-gray-50 transition'>
+                    <td className='px-4 py-3 text-gray-700 font-mono text-xs'>
+                      {s.studentId?.slice(0,8)}...
+                    </td>
+                    <td className='px-4 py-3 text-gray-600 text-xs'>
+                      {s.programId?.slice(0,12)}...
+                    </td>
+                    <td className='px-4 py-3'>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                                        ${s.status==='complete'?'bg-green-100 text-green-700'
+                                         :s.status==='processing'?'bg-blue-100 text-blue-700'
+                                         :'bg-gray-100 text-gray-600'}`}>
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className='px-4 py-3 text-gray-700'>
+                      {Math.round((s.quizScore||0)*100)}%
+                    </td>
+                    <td className='px-4 py-3 text-gray-600'>{s.hintsUsed}/3</td>
+                    <td className='px-4 py-3'>
+                      {s.flagged && (
+                        <span className='text-xs text-orange-600 font-medium'>⚠ Flagged</span>
+                      )}
+                    </td>
+                    <td className='px-4 py-3'>
+                      {s.status === 'complete' && (
+                        <button
+                          onClick={() => navigate(`/teacher/report/${s.sessionId}`)}
+                          className='text-xs text-blue-600 hover:underline'
+                        >
+                          View Report
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </main>
     </div>

@@ -11,6 +11,7 @@ import ProgramLibrary from './pages/student/ProgramLibrary'
 import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
+import StudentReport from './pages/teacher/StudentReport'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -77,6 +78,11 @@ export default function App() {
         <Route path='/teacher/dashboard' element={
           <ProtectedRoute user={user} role={role} requiredRole='teacher'>
             <TeacherDashboard user={user} />
+          </ProtectedRoute>
+        } />
+        <Route path='/teacher/report/:sessionId' element={
+          <ProtectedRoute user={user} role={role} requiredRole='teacher'>
+            <StudentReport />
           </ProtectedRoute>
         } />
 
