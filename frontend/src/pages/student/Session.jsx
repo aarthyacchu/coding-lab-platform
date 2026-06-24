@@ -7,11 +7,11 @@ import Editor from '@monaco-editor/react'
 import { db } from '../../services/firebase'
 import { useSession } from '../../hooks/useSession'
 import SessionTimer from '../../components/SessionTimer'
-import { Play, Send, ChevronLeft, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { Play, Send, ChevronLeft, CheckCircle, XCircle, Terminal, Lightbulb } from 'lucide-react'
 import { useProctor } from '../../hooks/useProctor'
 import ViolationBanner from '../../components/ViolationBanner'
 import HintPanel from '../../components/HintPanel'
-import { Lightbulb } from 'lucide-react'  // add Lightbulb to the lucide import
+import { runTests } from '../../services/api'
 
 export default function Session() {
   const { programId } = useParams()
@@ -22,6 +22,8 @@ export default function Session() {
   const [submitConfirm, setSubmitConfirm] = useState(false)
   const [showHints, setShowHints] = useState(false)
   const [hintsUsed, setHintsUsed] = useState(0)
+  const [testResults, setTestResults] = useState(null)
+  const [runningTests, setRunningTests] = useState(false)
 
   useEffect(() => {
     async function loadProgram() {
@@ -64,6 +66,21 @@ export default function Session() {
       }
     })
   }
+
+  async function handleRunTests() {
+    if (!program.testCases?.length) return
+    setRunningTests(true)
+    setTestResults(null)
+    try {
+      const result = await runTests(code, program.testCases)
+      setTestResults(result)
+    } catch (err) {
+      console.error('Test run failed:', err)
+    } finally {
+      setRunningTests(false)
+    }
+  }
+
   const editorOptions = {
     fontSize: 14,
     fontFamily: 'JetBrains Mono, Fira Code, Courier New, monospace',
@@ -144,6 +161,18 @@ export default function Session() {
             <Play size={14} fill='currentColor' />
             {isRunning ? 'Running...' : 'Run'}
           </button>
+
+          {program.testCases?.length > 0 && (
+            <button
+              onClick={handleRunTests}
+              disabled={runningTests}
+              className='flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700
+                         disabled:bg-purple-900 disabled:text-purple-600
+                         text-white text-sm font-medium px-4 py-1.5 rounded-lg transition'
+            >
+              {runningTests ? 'Checking...' : `Check (${program.testCases.length})`}
+            </button>
+          )}
 
           <button
             onClick={() => setShowHints(true)}
@@ -271,6 +300,34 @@ export default function Session() {
                     </pre>
                   </div>
                 )}
+              </div>
+            )}
+            {testResults && (
+              <div className='mt-4 space-y-2 border-t border-gray-700 pt-4'>
+                <p className='text-xs text-gray-400 font-semibold mb-2'>
+                  Test cases: {testResults.passedCount} / {testResults.totalCount} passed
+                </p>
+                {testResults.results.map((r, i) => (
+                  <div key={i}
+                       className={`rounded-lg p-2.5 text-xs border
+                                   ${r.passed
+                                       ? 'bg-green-900/30 border-green-800'
+                                       : 'bg-red-900/30 border-red-800'}`}
+                  >
+                    <div className='flex items-center justify-between mb-1'>
+                      <span className={r.passed ? 'text-green-400' : 'text-red-400'}>
+                        {r.passed ? '✓' : '✗'} {r.label}
+                      </span>
+                    </div>
+                    {!r.passed && (
+                      <div className='text-gray-400 space-y-0.5 mt-1'>
+                        <p>Expected: <span className='text-gray-300'>{r.expected}</span></p>
+                        <p>Got: <span className='text-gray-300'>{r.actual || '(no output)'}</span></p>
+                        {r.error && <p className='text-red-400'>{r.error}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -43,8 +43,8 @@ export default function StudentDashboard({ user }) {
         </div>
 
         {/* Stats row */}
-        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
-          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
+        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 items-stretch'>
+          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100 h-full flex flex-col justify-between'>
             <div className='flex items-center gap-2 mb-1'>
               <Flame className='text-orange-500' size={18} />
               <span className='text-xs text-gray-500 font-medium'>Streak</span>
@@ -54,7 +54,7 @@ export default function StudentDashboard({ user }) {
             </p>
             <p className='text-xs text-gray-400 mt-0.5'>days</p>
           </div>
-          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
+          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100 h-full flex flex-col justify-between'>
             <div className='flex items-center gap-2 mb-1'>
               <Medal className='text-yellow-500' size={18} />
               <span className='text-xs text-gray-500 font-medium'>Badges</span>
@@ -64,7 +64,7 @@ export default function StudentDashboard({ user }) {
             </p>
             <p className='text-xs text-gray-400 mt-0.5'>earned</p>
           </div>
-          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
+          <div className='bg-white rounded-xl p-4 shadow-sm border border-gray-100 h-full flex flex-col justify-between'>
             <div className='flex items-center gap-2 mb-1'>
               <BookOpen className='text-blue-500' size={18} />
               <span className='text-xs text-gray-500 font-medium'>Sessions</span>

@@ -5,6 +5,8 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './services/firebase'
 
+import Landing from './pages/Landing'
+import Signup from './pages/Signup'
 import Login from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary from './pages/student/ProgramLibrary'
@@ -13,6 +15,7 @@ import Quiz from './pages/student/Quiz'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import StudentReport from './pages/teacher/StudentReport'
 import ClassAnalytics from './pages/teacher/ClassAnalytics'
+import UploadProgram from './pages/teacher/UploadProgram'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -49,8 +52,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public route */}
+        {/* Public routes */}
         <Route path='/login' element={<Login />} />
+        <Route path='/signup' element={<Signup />} />
 
         {/* Student routes */}
         <Route path='/student/dashboard' element={
@@ -81,6 +85,11 @@ export default function App() {
             <TeacherDashboard user={user} />
           </ProtectedRoute>
         } />
+        <Route path='/teacher/upload-program' element={
+          <ProtectedRoute user={user} role={role} requiredRole='teacher'>
+            <UploadProgram />
+          </ProtectedRoute>
+        } />
         <Route path='/teacher/report/:sessionId' element={
           <ProtectedRoute user={user} role={role} requiredRole='teacher'>
             <StudentReport />
@@ -98,7 +107,7 @@ export default function App() {
             ? role === 'teacher'
               ? <Navigate to='/teacher/dashboard' replace />
               : <Navigate to='/student/dashboard' replace />
-            : <Navigate to='/login' replace />
+            : <Landing />
         } />
 
         {/* Catch-all */}

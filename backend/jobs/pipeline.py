@@ -99,7 +99,14 @@ def update_streak(db, student_id: str) -> int:
     if last_session is None:
         new_streak = 1
     else:
-        last_date = last_session
+        # Handle Firestore timestamp - convert to datetime if needed
+        if hasattr(last_session, 'date'):
+            # Already a datetime object (or DatetimeWithNanoseconds)
+            last_date = last_session
+        else:
+            # Fallback if it's stored differently
+            last_date = last_session
+        
         days_gap  = (now.date() - last_date.date()).days
 
         if days_gap == 0:

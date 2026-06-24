@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import Navbar from '../../components/Navbar'
-import { Users, BookOpen, AlertTriangle, CheckCircle, BarChart3 } from 'lucide-react'
+import { Users, BookOpen, AlertTriangle, CheckCircle, BarChart3, Plus } from 'lucide-react'
 
 export default function TeacherDashboard({ user }) {
   const navigate = useNavigate()
@@ -36,7 +36,7 @@ export default function TeacherDashboard({ user }) {
 
       // Fetch recent sessions for the table
       try {
-        const res = await fetch('http://localhost:8000/api/reports/sessions/recent')
+        const res = await fetch('/api/reports/sessions/recent')
         const data = await res.json()
         setSessions(data.sessions || [])
       } catch (e) {
@@ -59,19 +59,28 @@ export default function TeacherDashboard({ user }) {
               Class overview and student performance insights.
             </p>
           </div>
-          <button
-            onClick={() => navigate('/teacher/analytics')}
-            className='flex items-center gap-1.5 text-sm font-medium text-blue-600
-                       hover:text-blue-700 transition-colors'
-          >
-            <BarChart3 size={15} /> View Class Analytics
-          </button>
+          <div className='flex items-center gap-3'>
+            <button
+              onClick={() => navigate('/teacher/upload-program')}
+              className='flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white
+                         text-sm font-medium px-4 py-2 rounded-lg transition-colors'
+            >
+              <Plus size={15} /> Upload program
+            </button>
+            <button
+              onClick={() => navigate('/teacher/analytics')}
+              className='flex items-center gap-1.5 text-sm font-medium text-blue-600
+                         hover:text-blue-700 transition-colors'
+            >
+              <BarChart3 size={15} /> View Class Analytics
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <p className='text-gray-400'>Loading stats...</p>
         ) : (
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 items-stretch'>
             {[
               { icon: Users,        label: 'Students',      value: stats.totalStudents, color: 'blue'   },
               { icon: BookOpen,     label: 'Sessions',      value: stats.totalSessions, color: 'indigo' },
@@ -79,7 +88,7 @@ export default function TeacherDashboard({ user }) {
               { icon: AlertTriangle,label: 'Flagged',       value: stats.flagged,       color: 'red'    },
             ].map(({ icon: Icon, label, value, color }) => (
               <div key={label}
-                   className='bg-white rounded-xl p-4 shadow-sm border border-gray-100'>
+                   className='bg-white rounded-xl p-4 shadow-sm border border-gray-100 h-full flex flex-col justify-between'>
                 <div className={`text-${color}-500 mb-2`}>
                   <Icon size={20} />
                 </div>

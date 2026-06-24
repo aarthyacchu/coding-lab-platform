@@ -34,13 +34,22 @@ create_user('teacher@lab.com', 'teacher123', 'Prof. Sharma',
             'teacher', {'department': 'Computer Science'})
 
 create_user('student1@lab.com', 'student123', 'Arjun Patel',
-            'student', {'rollNumber': 'CS001', 'department': 'CSE', 'year': 2})
+    'student', {
+        'rollNumber': 'CS001', 'department': 'Computer Science',
+        'year': 2, 'section': 'A', 'classId': 'CS-2-A',
+    })
 
 create_user('student2@lab.com', 'student123', 'Priya Nair',
-            'student', {'rollNumber': 'CS002', 'department': 'CSE', 'year': 2})
+    'student', {
+        'rollNumber': 'CS002', 'department': 'Computer Science',
+        'year': 2, 'section': 'A', 'classId': 'CS-2-A',
+    })
 
 create_user('student3@lab.com', 'student123', 'Rohan Mehta',
-            'student', {'rollNumber': 'CS003', 'department': 'CSE', 'year': 2})
+    'student', {
+        'rollNumber': 'CS003', 'department': 'Computer Science',
+        'year': 2, 'section': 'B', 'classId': 'CS-2-B',
+    })
 
 # ── Create sample programs ──
 programs = [

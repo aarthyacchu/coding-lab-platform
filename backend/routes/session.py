@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import os
 import time
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from firebase_admin import firestore
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -27,6 +27,31 @@ class SubmitSessionRequest(BaseModel):
     sessionId:   str
     studentId:   str
     programId:   str
+
+# ── Day 8: Test Case models ──────────────────────────────────
+
+class TestCase(BaseModel):
+    input:          str = ''
+    expectedOutput: str
+    label:          str = ''
+
+class RunTestsRequest(BaseModel):
+    code:      str
+    language:  str = 'python'
+    testCases: List[TestCase]
+
+class TestResult(BaseModel):
+    label:    str
+    passed:   bool
+    input:    str
+    expected: str
+    actual:   str
+    error:    str = ''
+
+class RunTestsResponse(BaseModel):
+    results:      List[TestResult]
+    passedCount:  int
+    totalCount:   int
 
 
 # ── Sandboxed Python runner ─────────────────────────────────────
@@ -82,6 +107,43 @@ def run_python_sandboxed(code: str, timeout: int = 10) -> dict:
             pass
 
 
+# ── Day 8: Test runner with stdin support ─────────────────────────
+
+def run_python_with_input(code: str, stdin_input: str, timeout: int = 10) -> dict:
+    """
+    Same sandboxing as run_python_sandboxed, but feeds stdin_input
+    to the process — needed because test cases provide program input.
+    """
+    with tempfile.NamedTemporaryFile(
+        mode='w', suffix='.py', delete=False, encoding='utf-8'
+    ) as f:
+        f.write(code)
+        tmp_path = f.name
+
+    try:
+        result = subprocess.run(
+            ['python', tmp_path],
+            input=stdin_input,        # fed to the program's stdin
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return {
+            'stdout':   result.stdout,
+            'stderr':   result.stderr,
+            'exitCode': result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {'stdout': '', 'stderr': 'TimeoutError', 'exitCode': 1}
+    except Exception as e:
+        return {'stdout': '', 'stderr': str(e), 'exitCode': 1}
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
 # ── Routes ─────────────────────────────────────────────────────
 
 @router.post('/session/run', response_model=RunCodeResponse)
@@ -129,3 +191,45 @@ def submit_session(
     except Exception as e:
         print(f"[Submit] ERROR: {str(e)}")
         raise
+
+
+# ── Day 8: Test case runner endpoint ─────────────────────────────
+
+@router.post('/session/run-tests', response_model=RunTestsResponse)
+def run_tests(req: RunTestsRequest):
+    """
+    Runs the student's code once per test case, comparing stdout
+    against the expected output (whitespace-trimmed on both sides).
+    Used to verify the student is actually solving THIS program,
+    not just printing something that looks plausible.
+    """
+    if req.language != 'python':
+        raise HTTPException(status_code=400, detail='Only Python is supported.')
+
+    results = []
+    passed_count = 0
+
+    for tc in req.testCases:
+        outcome = run_python_with_input(req.code, tc.input)
+
+        actual_trimmed   = outcome['stdout'].strip()
+        expected_trimmed = tc.expectedOutput.strip()
+        passed = (actual_trimmed == expected_trimmed) and outcome['exitCode'] == 0
+
+        if passed:
+            passed_count += 1
+
+        results.append(TestResult(
+            label=tc.label or f'Test {len(results)+1}',
+            passed=passed,
+            input=tc.input,
+            expected=tc.expectedOutput,
+            actual=outcome['stdout'],
+            error=outcome['stderr'],
+        ))
+
+    return RunTestsResponse(
+        results=results,
+        passedCount=passed_count,
+        totalCount=len(req.testCases),
+    )

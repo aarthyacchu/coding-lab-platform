@@ -28,18 +28,6 @@ export async function runCode(code, language) {
   return res.json()
 }
 
-// export async function getHint(programId, userCode) {
-//   const res = await fetch(`${BASE}/hints/ask`, {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ programId, userCode })
-//   })
-//   if (!res.ok) throw new Error('Failed to get hint')
-//   return res.json()
-// }
-
-// Add these two functions to the END of frontend/src/services/api.js
-
 export async function getHint(programId, programTitle, programDesc, concepts, userCode, hintNumber) {
   const res = await fetch('/api/hints/ask', {
     method:  'POST',
@@ -76,4 +64,15 @@ export async function generateQuiz(programTitle, programDesc, concepts, studentC
     throw new Error(err.detail || 'Quiz generation failed')
   }
   return res.json()   // { questions: [...] }
+}
+
+// Day 8: Run code against test cases
+export async function runTests(code, testCases) {
+  const res = await fetch('/api/session/run-tests', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, language: 'python', testCases })
+  })
+  if (!res.ok) throw new Error('Test run failed')
+  return res.json()   // { results: [...], passedCount, totalCount }
 }

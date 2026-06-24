@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { auth, db } from '../services/firebase'
 
 export default function Login() {
@@ -104,8 +104,11 @@ export default function Login() {
           </button>
         </div>
 
-        <p className='text-center text-xs text-gray-400 mt-6'>
-          Contact your teacher to get your login credentials.
+        <p className='text-center text-sm text-gray-500 mt-6'>
+          New here?{' '}
+          <Link to='/signup' className='text-blue-600 font-medium hover:underline'>
+            Create an account
+          </Link>
         </p>
       </div>
     </div>
