@@ -15,7 +15,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 # Now import routes (they can safely use firestore.client())
-from routes import programs, session, hints, quiz, reports
+from routes import programs, session, hints, quiz, reports, explainer, chatbot
 
 app = FastAPI(title="CodeLab API", version="1.0.0")
 
@@ -32,6 +32,8 @@ app.include_router(session.router, prefix="/api")
 app.include_router(hints.router, prefix="/api")
 app.include_router(quiz.router, prefix='/api')
 app.include_router(reports.router, prefix="/api")
+app.include_router(explainer.router, prefix='/api')
+app.include_router(chatbot.router, prefix='/api')
 
 @app.get("/api/health")
 def health_check():

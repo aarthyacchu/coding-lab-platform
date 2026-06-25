@@ -93,8 +93,7 @@ export default function ProgramLibrary() {
                   {groupedPrograms[subject].map(prog => (
                     <div key={prog.id}
                          className='bg-white rounded-xl p-5 shadow-sm border border-gray-100
-                                    hover:border-blue-300 hover:shadow-md transition cursor-pointer'
-                         onClick={() => navigate(`/student/session/${prog.id}`)}
+                                    hover:border-blue-300 hover:shadow-md transition'
                     >
                       <div className='flex items-start justify-between'>
                         <div className='flex-1'>
@@ -128,6 +127,32 @@ export default function ProgramLibrary() {
                           <Zap size={12} />
                           <span>{prog.hintLimit ?? 3} hints</span>
                         </div>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <div className='flex gap-2 mt-4 pt-3 border-t border-gray-100'>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/student/understand/${prog.id}`)
+                          }}
+                          className='flex-1 flex items-center justify-center gap-1.5
+                                     bg-purple-50 hover:bg-purple-100 text-purple-700
+                                     text-xs font-medium py-2 rounded-lg transition-colors'
+                        >
+                          <BookOpen size={14} /> Understand the logic
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/student/session/${prog.id}`)
+                          }}
+                          className='flex-1 flex items-center justify-center gap-1.5
+                                     bg-blue-600 hover:bg-blue-700 text-white
+                                     text-xs font-medium py-2 rounded-lg transition-colors'
+                        >
+                          <Code2 size={14} /> Start coding
+                        </button>
                       </div>
                     </div>
                   ))}

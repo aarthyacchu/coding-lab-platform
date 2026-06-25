@@ -12,6 +12,7 @@ import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary from './pages/student/ProgramLibrary'
 import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
+import UnderstandLogic from './pages/student/UnderstandLogic'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import StudentReport from './pages/teacher/StudentReport'
 import ClassAnalytics from './pages/teacher/ClassAnalytics'
@@ -65,6 +66,11 @@ export default function App() {
         <Route path='/student/programs' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
             <ProgramLibrary />
+          </ProtectedRoute>
+        } />
+        <Route path='/student/understand/:programId' element={
+          <ProtectedRoute user={user} role={role} requiredRole='student'>
+            <UnderstandLogic />
           </ProtectedRoute>
         } />
         <Route path='/student/session/:programId' element={

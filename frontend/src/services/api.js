@@ -76,3 +76,25 @@ export async function runTests(code, testCases) {
   if (!res.ok) throw new Error('Test run failed')
   return res.json()   // { results: [...], passedCount, totalCount }
 }
+
+// Day 9: Generate animated logic explainer
+export async function generateExplainer(programTitle, programDesc, concepts) {
+  const res = await fetch('/api/explainer/generate', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programTitle, programDesc, concepts })
+  })
+  if (!res.ok) throw new Error('Explainer generation failed')
+  return res.json()   // { steps: [...] }
+}
+
+// Day 9: Ask chatbot about program logic
+export async function askChatbot(programTitle, programDesc, concepts, history, question) {
+  const res = await fetch('/api/chatbot/ask', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programTitle, programDesc, concepts, history, question })
+  })
+  if (!res.ok) throw new Error('Chatbot request failed')
+  return res.json()   // { answer: string }
+}
