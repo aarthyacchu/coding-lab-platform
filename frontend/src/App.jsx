@@ -4,12 +4,17 @@ import { useState, useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './services/firebase'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 import Landing from './pages/Landing'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
+import StudentLayout from './layouts/StudentLayout'
 import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary from './pages/student/ProgramLibrary'
+// Note: Sessions and Profile pages don't exist yet - using StudentDashboard as placeholder
+// import Sessions from './pages/student/Sessions'
+// import Profile from './pages/student/Profile'
 import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
 import UnderstandLogic from './pages/student/UnderstandLogic'
@@ -51,23 +56,26 @@ export default function App() {
   )
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
         {/* Public routes */}
         <Route path='/login' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
 
-        {/* Student routes */}
-        <Route path='/student/dashboard' element={
+        {/* Student routes - wrapped in StudentLayout */}
+        <Route path='/student' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
-            <StudentDashboard user={user} />
+            <StudentLayout user={user} />
           </ProtectedRoute>
-        } />
-        <Route path='/student/programs' element={
-          <ProtectedRoute user={user} role={role} requiredRole='student'>
-            <ProgramLibrary />
-          </ProtectedRoute>
-        } />
+        }>
+          <Route path='dashboard' element={<StudentDashboard user={user} />} />
+          <Route path='programs' element={<ProgramLibrary />} />
+          <Route path='sessions' element={<StudentDashboard user={user} />} />
+          <Route path='profile' element={<StudentDashboard user={user} />} />
+        </Route>
+
+        {/* Student session routes - outside layout for fullscreen */}
         <Route path='/student/understand/:programId' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
             <UnderstandLogic />
@@ -78,7 +86,6 @@ export default function App() {
             <Session />
           </ProtectedRoute>
         } />
-
         <Route path='/student/quiz' element={
           <ProtectedRoute user={user} role={role} requiredRole='student'>
             <Quiz />
@@ -120,5 +127,6 @@ export default function App() {
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }
