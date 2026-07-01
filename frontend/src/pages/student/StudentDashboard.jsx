@@ -1,19 +1,22 @@
 // frontend/src/pages/student/StudentDashboard.jsx
-// Dashboard with glassmorphic cards, gradient ambiance, and smooth animations
+// Energetic, gamified dashboard inspired by Duolingo/fitness apps
 
 import { useEffect, useState, useRef } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../../services/firebase'
 import BadgeGrid from '../../components/BadgeGrid'
+import StreakHeatmap from '../../components/StreakHeatmap'
 import { Flame, Medal, BookOpen, ChevronRight, Trophy, Sparkles, Terminal } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 
 export default function StudentDashboard({ user }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [completedSessions, setCompletedSessions] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
-  const [visibleElements, setVisibleElements] = useState(new Set(['stats', 'badges', 'cta']))
+  const [visibleElements, setVisibleElements] = useState(new Set(['hero', 'stats', 'heatmap', 'badges', 'cta']))
+  const [recentBadge, setRecentBadge] = useState(null)
   const navigate = useNavigate()
 
   // Get theme from context
@@ -25,7 +28,9 @@ export default function StudentDashboard({ user }) {
   const [sessionCount, setSessionCount] = useState(0)
 
   // Intersection observer refs
+  const heroRef = useRef(null)
   const statsRef = useRef(null)
+  const heatmapRef = useRef(null)
   const badgeGridRef = useRef(null)
   const ctaRef = useRef(null)
 
@@ -43,10 +48,44 @@ export default function StudentDashboard({ user }) {
   useEffect(() => {
     async function loadProfile() {
       const snap = await getDoc(doc(db, 'users', user.uid))
-      if (snap.exists()) setProfile(snap.data())
+      if (snap.exists()) {
+        const data = snap.data()
+        setProfile(data)
+        
+        // Check for recently earned badges (within last 48 hours)
+        if (data.badgeTimestamps) {
+          const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000)
+          const recent = Object.entries(data.badgeTimestamps)
+            .filter(([_, timestamp]) => timestamp > twoDaysAgo)
+            .sort((a, b) => b[1] - a[1])[0]
+          
+          if (recent) {
+            setRecentBadge(recent[0])
+          }
+        }
+      }
       setLoading(false)
     }
     loadProfile()
+  }, [user.uid])
+
+  // Load completed sessions count
+  useEffect(() => {
+    async function loadSessionCount() {
+      try {
+        const q = query(
+          collection(db, 'sessions'),
+          where('studentId', '==', user.uid),
+          where('status', '==', 'complete')
+        )
+        const snap = await getDocs(q)
+        setCompletedSessions(snap.size)
+      } catch (err) {
+        console.error('Failed to load session count:', err)
+        setCompletedSessions(0)
+      }
+    }
+    loadSessionCount()
   }, [user.uid])
 
   // Animate counters when stats become visible
@@ -56,20 +95,20 @@ export default function StudentDashboard({ user }) {
     if (reducedMotion) {
       setStreakCount(profile.streak ?? 0)
       setBadgeCount(profile.badges?.length ?? 0)
-      setSessionCount(0)
+      setSessionCount(completedSessions)
       return
     }
 
     if (!visibleElements.has('stats')) {
       setStreakCount(profile.streak ?? 0)
       setBadgeCount(profile.badges?.length ?? 0)
-      setSessionCount(0)
+      setSessionCount(completedSessions)
       return
     }
 
     const targetStreak = profile.streak ?? 0
     const targetBadges = profile.badges?.length ?? 0
-    const targetSessions = 0
+    const targetSessions = completedSessions
 
     const duration = 600
     const steps = 30
@@ -93,7 +132,7 @@ export default function StudentDashboard({ user }) {
     }, stepDuration)
 
     return () => clearInterval(timer)
-  }, [profile, visibleElements, reducedMotion])
+  }, [profile, completedSessions, visibleElements, reducedMotion])
 
   // Intersection observer for scroll animations
   useEffect(() => {
@@ -112,7 +151,7 @@ export default function StudentDashboard({ user }) {
       { threshold: 0.1 }
     )
 
-    const elements = [statsRef, badgeGridRef, ctaRef]
+    const elements = [heroRef, statsRef, heatmapRef, badgeGridRef, ctaRef]
     elements.forEach(ref => {
       if (ref.current) observer.observe(ref.current)
     })
@@ -128,7 +167,27 @@ export default function StudentDashboard({ user }) {
 
   const isVisible = (section) => visibleElements.has(section)
 
-  // Theme classes
+  // Get streak message for ghost mascot
+  const getStreakMessage = (streak) => {
+    if (streak === 0) return "Let's start!"
+    if (streak < 3) return `${streak} day${streak > 1 ? 's' : ''}!`
+    if (streak < 5) return `${streak} days strong!`
+    if (streak < 10) return `Keep it up!`
+    return `${streak} days! 🎉`
+  }
+
+  // Total badges for progress calculation
+  const TOTAL_BADGES = 8
+
+  // Calculate progress toward next streak milestone
+  const getStreakProgress = (streak) => {
+    if (streak < 5) return (streak / 5) * 100
+    if (streak < 10) return ((streak - 5) / 5) * 100
+    if (streak < 30) return ((streak - 10) / 20) * 100
+    return 100
+  }
+
+  // Theme classes with more saturated colors
   const t = {
     dark: {
       bg: 'bg-[#0F0F10]',
@@ -146,225 +205,297 @@ export default function StudentDashboard({ user }) {
     }
   }[theme]
 
+  // Circular progress component - compact Notion-style
+  const CircularProgress = ({ percentage, size = 44, strokeWidth = 2.5, color, children }) => {
+    const radius = (size - strokeWidth) / 2
+    const circumference = 2 * Math.PI * radius
+    const offset = circumference - (percentage / 100) * circumference
+
+    return (
+      <div className='relative flex-shrink-0' style={{ width: size, height: size }}>
+        <svg width={size} height={size} className='transform -rotate-90'>
+          {/* Background circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}
+            strokeWidth={strokeWidth}
+            fill='none'
+          />
+          {/* Progress circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill='none'
+            strokeDasharray={circumference}
+            strokeDashoffset={reducedMotion ? offset : circumference}
+            strokeLinecap='round'
+            className={!reducedMotion ? 'transition-all duration-1000 ease-out' : ''}
+            style={!reducedMotion ? { strokeDashoffset: offset } : {}}
+          />
+        </svg>
+        <div className='absolute inset-0 flex items-center justify-center'>
+          {children}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`min-h-screen ${t.bg} ${t.text} transition-colors duration-300 relative overflow-hidden`}>
       
-      {/* Ambient gradient background */}
+      {/* Subtle background - neutral like Notion */}
       <div className='fixed inset-0 pointer-events-none z-0'>
-        {/* Subtle gradient wash */}
+        {/* Very subtle gradient */}
         <div 
           className='absolute inset-0 transition-all duration-300'
           style={{
             background: theme === 'dark'
-              ? 'linear-gradient(135deg, rgba(129, 140, 248, 0.08) 0%, rgba(99, 102, 241, 0.04) 50%, rgba(79, 70, 229, 0.06) 100%)'
-              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(139, 92, 246, 0.03) 50%, rgba(167, 139, 250, 0.05) 100%)',
-            opacity: theme === 'dark' ? 0.4 : 0.3
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0%, rgba(139, 92, 246, 0.01) 100%)'
+              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.015) 0%, rgba(139, 92, 246, 0.01) 100%)',
+            opacity: 0.5
           }}
         />
-        
-        {/* Floating ambient badges - low opacity, in corners */}
-        <div className={`absolute top-20 left-8 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-20' : 'opacity-15'}`}>
-          <div className={`w-16 h-16 rounded-full border-2 ${theme === 'dark' ? 'border-amber-500' : 'border-amber-600'} flex items-center justify-center
-                         ${!reducedMotion ? 'animate-float' : ''}`}>
-            <Sparkles size={18} className={theme === 'dark' ? 'text-amber-400' : 'text-amber-500'} strokeWidth={2} />
-          </div>
-        </div>
-        
-        <div className={`absolute top-32 right-12 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-15' : 'opacity-12'}`}>
-          <div className={`w-20 h-20 rounded-full border-2 ${theme === 'dark' ? 'border-emerald-500' : 'border-emerald-600'} flex items-center justify-center
-                         ${!reducedMotion ? 'animate-float-delayed' : ''}`}>
-            <Terminal size={20} className={theme === 'dark' ? 'text-emerald-400' : 'text-emerald-500'} strokeWidth={2} />
-          </div>
-        </div>
-        
-        <div className={`absolute bottom-40 left-16 transition-opacity duration-300 ${theme === 'dark' ? 'opacity-15' : 'opacity-12'}`}>
-          <div className={`w-14 h-14 rounded-full border-2 ${theme === 'dark' ? 'border-violet-500' : 'border-violet-600'} flex items-center justify-center
-                         ${!reducedMotion ? 'animate-float-delayed-2' : ''}`}>
-            <Trophy size={16} className={theme === 'dark' ? 'text-violet-400' : 'text-violet-500'} strokeWidth={2} />
-          </div>
-        </div>
       </div>
 
       <main className='max-w-5xl mx-auto px-6 py-12 relative z-10'>
-        {/* Welcome header */}
-        <div className='mb-10'>
-          <h1 className={`text-3xl lg:text-4xl font-bold ${t.text} leading-tight`}>
+        {/* HERO SECTION - Clean, compact header */}
+        <div 
+          ref={heroRef}
+          data-section='hero'
+          className={`mb-8 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                     ${isVisible('hero') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
+          <h1 className={`text-2xl font-semibold ${t.text} leading-tight`}>
             Welcome back, {profile?.name || 'Student'}
           </h1>
-          <p className={`${t.textMuted} mt-2 text-base`}>
+          <p className={`${t.textMuted} text-sm mt-1`}>
             {profile?.department} • Year {profile?.year}
           </p>
         </div>
-
-        {/* Stats row - glassmorphic cards with staggered entrance */}
+        {/* STAT CARDS - Compact Notion-style with subtle rings */}
         <div 
           ref={statsRef}
           data-section='stats'
-          className='grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12'
+          className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6'
         >
-          {/* Streak card */}
+          {/* Day Streak - Subtle amber accent */}
           <div 
-            className={`rounded-2xl border ${t.border} p-6 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-                       hover:-translate-y-1 cursor-default
+            className={`rounded-lg border ${t.border} p-4 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                       hover:-translate-y-0.5 cursor-default
                        ${isVisible('stats') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{
-              backgroundColor: t.cardBg,
-              backdropFilter: 'blur(20px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+              background: theme === 'dark'
+                ? 'rgba(26, 26, 29, 0.7)'
+                : 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               boxShadow: theme === 'dark' 
-                ? '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-                : '0 20px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                : '0 1px 3px rgba(0, 0, 0, 0.05)',
               transitionDelay: isVisible('stats') && !reducedMotion ? '0ms' : '0ms'
             }}
           >
-            <div className='flex items-start justify-between mb-4'>
-              <div className={`w-12 h-12 rounded-full border-2 ${theme === 'dark' ? 'border-orange-500' : 'border-orange-600'} flex items-center justify-center`}>
-                <Flame size={20} className={theme === 'dark' ? 'text-orange-400' : 'text-orange-500'} strokeWidth={2} />
+            <div className='flex items-center gap-3'>
+              <CircularProgress 
+                percentage={getStreakProgress(profile?.streak ?? 0)}
+                size={44}
+                strokeWidth={2.5}
+                color={theme === 'dark' ? '#f59e0b' : '#d97706'}
+              >
+                <Flame size={16} className={theme === 'dark' ? 'text-amber-500' : 'text-amber-600'} strokeWidth={2} />
+              </CircularProgress>
+              
+              <div className='flex-1'>
+                <p className={`text-2xl font-semibold ${t.text}`}>
+                  {streakCount}
+                </p>
+                <p className={`text-xs ${t.textMuted} font-medium uppercase tracking-wide`}>
+                  Day Streak
+                </p>
               </div>
             </div>
-            <p className={`text-5xl font-bold ${t.text} mb-1`}>
-              {streakCount}
-            </p>
-            <p className={`text-sm ${t.textMuted} font-medium`}>
-              Day Streak
-            </p>
           </div>
-
-          {/* Badges card */}
+          {/* Badges Earned - Subtle violet accent */}
           <div 
-            className={`rounded-2xl border ${t.border} p-6 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-                       hover:-translate-y-1 cursor-default
+            className={`rounded-lg border ${t.border} p-4 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                       hover:-translate-y-0.5 cursor-default
                        ${isVisible('stats') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{
-              backgroundColor: t.cardBg,
-              backdropFilter: 'blur(20px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+              background: theme === 'dark'
+                ? 'rgba(26, 26, 29, 0.7)'
+                : 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               boxShadow: theme === 'dark' 
-                ? '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-                : '0 20px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                : '0 1px 3px rgba(0, 0, 0, 0.05)',
+              transitionDelay: isVisible('stats') && !reducedMotion ? '50ms' : '0ms'
+            }}
+          >
+            <div className='flex items-center gap-3'>
+              <CircularProgress 
+                percentage={(badgeCount / TOTAL_BADGES) * 100}
+                size={44}
+                strokeWidth={2.5}
+                color={theme === 'dark' ? '#8b5cf6' : '#7c3aed'}
+              >
+                <Medal size={16} className={theme === 'dark' ? 'text-violet-500' : 'text-violet-600'} strokeWidth={2} />
+              </CircularProgress>
+              
+              <div className='flex-1'>
+                <p className={`text-2xl font-semibold ${t.text}`}>
+                  {badgeCount}<span className={`text-base ${t.textMuted}`}>/{TOTAL_BADGES}</span>
+                </p>
+                <p className={`text-xs ${t.textMuted} font-medium uppercase tracking-wide`}>
+                  Badges
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Sessions Completed - Subtle indigo accent */}
+          <div 
+            className={`rounded-lg border ${t.border} p-4 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                       hover:-translate-y-0.5 cursor-default
+                       ${isVisible('stats') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            style={{
+              background: theme === 'dark'
+                ? 'rgba(26, 26, 29, 0.7)'
+                : 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: theme === 'dark' 
+                ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                : '0 1px 3px rgba(0, 0, 0, 0.05)',
               transitionDelay: isVisible('stats') && !reducedMotion ? '100ms' : '0ms'
             }}
           >
-            <div className='flex items-start justify-between mb-4'>
-              <div className={`w-12 h-12 rounded-full border-2 ${theme === 'dark' ? 'border-yellow-500' : 'border-yellow-600'} flex items-center justify-center`}>
-                <Medal size={20} className={theme === 'dark' ? 'text-yellow-400' : 'text-yellow-500'} strokeWidth={2} />
+            <div className='flex items-center gap-3'>
+              <div className='relative flex-shrink-0' style={{ width: 44, height: 44 }}>
+                <div className='absolute inset-0 flex items-center justify-center'>
+                  <BookOpen size={16} className={theme === 'dark' ? 'text-indigo-500' : 'text-indigo-600'} strokeWidth={2} />
+                </div>
+              </div>
+              
+              <div className='flex-1'>
+                <p className={`text-2xl font-semibold ${t.text}`}>
+                  {sessionCount}
+                </p>
+                <p className={`text-xs ${t.textMuted} font-medium uppercase tracking-wide`}>
+                  Sessions
+                </p>
               </div>
             </div>
-            <p className={`text-5xl font-bold ${t.text} mb-1`}>
-              {badgeCount}
-            </p>
-            <p className={`text-sm ${t.textMuted} font-medium`}>
-              Badges Earned
-            </p>
-          </div>
-
-          {/* Sessions card */}
-          <div 
-            className={`rounded-2xl border ${t.border} p-6 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-                       hover:-translate-y-1 cursor-default
-                       ${isVisible('stats') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-            style={{
-              backgroundColor: t.cardBg,
-              backdropFilter: 'blur(20px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(150%)',
-              boxShadow: theme === 'dark' 
-                ? '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-                : '0 20px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-              transitionDelay: isVisible('stats') && !reducedMotion ? '200ms' : '0ms'
-            }}
-          >
-            <div className='flex items-start justify-between mb-4'>
-              <div className={`w-12 h-12 rounded-full border-2 ${theme === 'dark' ? 'border-blue-500' : 'border-blue-600'} flex items-center justify-center`}>
-                <BookOpen size={20} className={theme === 'dark' ? 'text-blue-400' : 'text-blue-500'} strokeWidth={2} />
-              </div>
-            </div>
-            <p className={`text-5xl font-bold ${t.text} mb-1`}>
-              {sessionCount}
-            </p>
-            <p className={`text-sm ${t.textMuted} font-medium`}>
-              Sessions Completed
-            </p>
           </div>
         </div>
-
-        {/* Badge Grid section */}
+        {/* STREAK HEATMAP - Compact activity calendar */}
+        <div 
+          ref={heatmapRef}
+          data-section='heatmap'
+          className={`rounded-lg border ${t.border} p-5 mb-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                     ${isVisible('heatmap') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          style={{
+            backgroundColor: t.cardBg,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: theme === 'dark'
+              ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+              : '0 1px 3px rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <div className='flex items-center gap-2 mb-4'>
+            <Sparkles size={14} className={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
+            <h2 className={`text-sm font-medium ${t.text}`}>Your Activity</h2>
+          </div>
+          <StreakHeatmap userId={user.uid} theme={theme} />
+        </div>
+        {/* BADGE GRID - Clean, compact */}
         <div 
           ref={badgeGridRef}
           data-section='badges'
-          className={`rounded-2xl border ${t.border} p-8 shadow-2xl mb-12 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+          className={`rounded-lg border ${t.border} p-5 mb-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
                      ${isVisible('badges') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
           style={{
             backgroundColor: t.cardBg,
-            backdropFilter: 'blur(20px) saturate(150%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(150%)'
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: theme === 'dark'
+              ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+              : '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}
         >
-          <h2 className={`text-xl font-bold ${t.text} mb-6`}>Your Badges</h2>
-          <BadgeGrid earnedBadges={profile?.badges || []} />
+          <div className='flex items-center justify-between mb-4'>
+            <div className='flex items-center gap-2'>
+              <Trophy size={14} className={theme === 'dark' ? 'text-amber-400' : 'text-amber-600'} />
+              <h2 className={`text-sm font-medium ${t.text}`}>Your Badges</h2>
+            </div>
+            
+            {/* Recently earned badge highlight */}
+            {recentBadge && (
+              <div className={`px-2 py-0.5 rounded-md text-[10px] font-semibold
+                             ${theme === 'dark' 
+                               ? 'bg-green-500/10 text-green-400' 
+                               : 'bg-green-100 text-green-700'
+                             }`}>
+                ✨ New Badge
+              </div>
+            )}
+          </div>
+          
+          <BadgeGrid earnedBadges={profile?.badges || []} theme={theme} currentStreak={profile?.streak ?? 0} />
         </div>
-
-        {/* Start lab CTA - visual anchor */}
+        {/* BOTTOM CTA - Clean, professional */}
         <div 
           ref={ctaRef}
           data-section='cta'
-          className={`rounded-3xl border border-white/10 p-10 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] relative overflow-hidden
+          className={`rounded-lg border border-white/10 p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] relative overflow-hidden
                      ${isVisible('cta') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
           style={{
-            background: 'linear-gradient(135deg, rgba(129, 140, 248, 0.9) 0%, rgba(99, 102, 241, 0.85) 100%)',
-            backdropFilter: 'blur(20px) saturate(150%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(150%)'
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(139, 92, 246, 0.9) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: theme === 'dark'
+              ? '0 2px 8px rgba(0, 0, 0, 0.3)'
+              : '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}
         >
-          {/* Background trophy accent */}
-          <div className='absolute top-8 right-8 opacity-10'>
-            <Trophy size={120} strokeWidth={1.5} />
-          </div>
+          {/* Subtle background accent */}
+          <div className='absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl' />
           
           <div className='relative z-10'>
-            <h2 className='text-2xl lg:text-3xl font-bold text-white mb-2'>
+            <h2 className='text-lg font-semibold text-white mb-1'>
               Ready for today's lab?
             </h2>
-            <p className='text-blue-100 text-base mb-6 max-w-xl'>
-              Pick a program and start your proctored session. Build real skills with AI-guided hints.
+            <p className='text-indigo-100 text-sm mb-4 max-w-xl'>
+              Pick a program and start your proctored session
             </p>
             <button
               onClick={() => navigate('/student/programs')}
-              className='bg-white text-[#6366F1] font-bold text-base px-8 py-4 rounded-xl
+              className={`bg-white text-[#6366F1] font-semibold text-sm px-5 py-2.5 rounded-lg
                          flex items-center gap-2 hover:bg-blue-50 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]
-                         hover:-translate-y-1 hover:shadow-xl shadow-lg'
+                         hover:-translate-y-0.5 group`}
+              style={{
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+              }}
             >
-              Browse Programs <ChevronRight size={20} strokeWidth={2.5} />
+              Browse Programs 
+              <ChevronRight size={16} strokeWidth={2.5} className={`${!reducedMotion ? 'group-hover:translate-x-0.5 transition-transform duration-300' : ''}`} />
             </button>
           </div>
         </div>
       </main>
 
-      {/* Animations */}
+      {/* CSS Animations */}
       <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(5deg); }
-        }
-        
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float 7s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-
-        .animate-float-delayed-2 {
-          animation: float 8s ease-in-out infinite;
-          animation-delay: 2s;
-        }
-        
         @media (prefers-reduced-motion: reduce) {
-          .animate-float,
-          .animate-float-delayed,
-          .animate-float-delayed-2 {
-            animation: none;
+          * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
           }
         }
       `}</style>
