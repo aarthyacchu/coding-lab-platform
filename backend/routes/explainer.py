@@ -24,6 +24,23 @@ class ExplainerResponse(BaseModel):
     steps: List[ExplainerStep]
 
 
+class FlowchartRequest(BaseModel):
+    programTitle: str
+    programDesc:  str
+    concepts:     list[str]
+    starterCode:  str
+
+class FlowchartNode(BaseModel):
+    id:         str
+    type:       str  # 'start' | 'process' | 'decision' | 'output' | 'end'
+    label:      str
+    connectsTo: list[str]
+
+class FlowchartResponse(BaseModel):
+    nodes:     List[FlowchartNode]
+    variables: list[str]  # optional variable names for tracker
+
+
 EXPLAINER_SYSTEM_PROMPT = """
 You are a programming tutor creating a step-by-step LOGIC walkthrough
 for a college student, before they write any code.
@@ -99,3 +116,78 @@ who has not started coding yet.
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Explainer generation failed: {str(e)}')
+
+
+FLOWCHART_SYSTEM_PROMPT = """
+You are a programming tutor creating a visual flowchart representation
+of an algorithm's logic flow.
+
+STRICT RULES:
+1. Create a LINEAR TOP-TO-BOTTOM flowchart (no complex branching diagrams).
+2. Each node must have a unique id (string, e.g. "1", "2", "3"...).
+3. Node types: 'start', 'process', 'decision', 'output', 'end'
+   - start: exactly one, at the beginning
+   - process: computational steps, assignments, calculations
+   - decision: if/else, while/for conditions (use sparingly)
+   - output: return value or print statement
+   - end: exactly one, at the end
+4. Keep it simple: 5-8 nodes total, linear flow preferred.
+5. connectsTo: array of node IDs this node connects to (usually just one, except decision nodes can have two).
+6. variables: array of variable names that are key to this algorithm (e.g. ["n", "result", "i"]) -- can be empty.
+7. Return ONLY valid JSON, no markdown fences, no commentary.
+
+JSON format:
+{
+  "nodes": [
+    { "id": "1", "type": "start", "label": "Start", "connectsTo": ["2"] },
+    { "id": "2", "type": "process", "label": "Initialize sum = 0", "connectsTo": ["3"] },
+    { "id": "3", "type": "decision", "label": "i < n?", "connectsTo": ["4", "5"] },
+    { "id": "4", "type": "process", "label": "sum += i", "connectsTo": ["3"] },
+    { "id": "5", "type": "output", "label": "Return sum", "connectsTo": ["6"] },
+    { "id": "6", "type": "end", "label": "End", "connectsTo": [] }
+  ],
+  "variables": ["n", "sum", "i"]
+}
+"""
+
+
+@router.post('/explainer/flowchart', response_model=FlowchartResponse)
+def generate_flowchart(req: FlowchartRequest):
+    """
+    Generate an animated flowchart representation of the algorithm logic.
+    """
+    user_message = f"""
+Program: {req.programTitle}
+Task: {req.programDesc}
+Concepts: {', '.join(req.concepts)}
+
+Starter code:
+{req.starterCode[:500] if req.starterCode else 'None provided'}
+
+Create a simple top-to-bottom flowchart showing the algorithm's logic flow.
+Keep it linear and easy to understand.
+"""
+    try:
+        completion = client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=[
+                {'role': 'system', 'content': FLOWCHART_SYSTEM_PROMPT},
+                {'role': 'user',   'content': user_message},
+            ],
+            max_tokens=1000,
+            temperature=0.4,
+        )
+        data = extract_json(completion.choices[0].message.content)
+        nodes = data.get('nodes', [])
+        variables = data.get('variables', [])
+        
+        if not nodes:
+            raise ValueError('Empty nodes list returned')
+        
+        return FlowchartResponse(
+            nodes=[FlowchartNode(**n) for n in nodes],
+            variables=variables
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Flowchart generation failed: {str(e)}')

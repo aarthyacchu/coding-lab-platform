@@ -98,3 +98,45 @@ export async function askChatbot(programTitle, programDesc, concepts, history, q
   if (!res.ok) throw new Error('Chatbot request failed')
   return res.json()   // { answer: string }
 }
+
+// Explain logic: Get step-by-step conceptual breakdown
+export async function explainLogic(programTitle, programDesc, concepts, starterCode) {
+  const res = await fetch('/api/explain/logic', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programTitle, programDesc, concepts, starterCode })
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Failed to generate explanation')
+  }
+  return res.json()   // { steps: [{ title, explanation }] }
+}
+
+// Ask about program: Get answer to student's question about program logic
+export async function askAboutProgram(programTitle, programDesc, concepts, question) {
+  const res = await fetch('/api/explain/ask', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programTitle, programDesc, concepts, question })
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Failed to get answer')
+  }
+  return res.json()   // { answer: string }
+}
+
+// Generate flowchart: Get flowchart nodes for visual flow simulator
+export async function generateFlowchart(programTitle, programDesc, concepts, starterCode) {
+  const res = await fetch('/api/explainer/flowchart', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programTitle, programDesc, concepts, starterCode })
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Failed to generate flowchart')
+  }
+  return res.json()   // { nodes: [...], variables: [...] }
+}
