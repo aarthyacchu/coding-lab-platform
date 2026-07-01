@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../../services/firebase'
-import { generateQuiz } from '../../services/api'
+import { generateQuiz, submitSession } from '../../services/api'
 import { CheckCircle, XCircle, Loader2, BookOpen } from 'lucide-react'
 
 export default function Quiz() {
   // Data passed from Session.jsx via navigate state
-  // { sessionId, program, studentCode }
+  // { sessionId, program, studentCode, studentId }
   const location = useLocation()
   const navigate  = useNavigate()
-  const { sessionId, program, studentCode } = location.state || {}
+  const { sessionId, program, studentCode, studentId } = location.state || {}
 
   const [questions,  setQuestions]  = useState([])
   const [answers,    setAnswers]    = useState({})   // { q1: 'A', q2: 'C', ... }
@@ -77,6 +77,20 @@ export default function Quiz() {
         quizAnswers: quizAnswers,
         status:      'submitted',   // ready for ML pipeline (Day 5)
       })
+      
+      // Trigger backend pipeline (streak/badges/completion)
+      // This runs as a background task, so we don't wait for it
+      try {
+        await submitSession({
+          sessionId,
+          studentId,
+          programId: program.id,
+        })
+        console.log('Pipeline triggered successfully')
+      } catch (pipelineErr) {
+        // Don't block the UI — pipeline is best-effort/background
+        console.error('Failed to trigger pipeline:', pipelineErr)
+      }
     } catch (err) {
       console.error('Failed to save quiz score:', err)
     }

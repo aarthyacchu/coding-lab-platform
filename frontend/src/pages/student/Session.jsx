@@ -63,6 +63,7 @@ export default function Session() {
         sessionId,
         program,
         studentCode: code,
+        studentId: user.uid,  // Pass authenticated user ID to Quiz
       }
     })
   }

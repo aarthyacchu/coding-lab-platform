@@ -12,9 +12,8 @@ import Login from './pages/Login'
 import StudentLayout from './layouts/StudentLayout'
 import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary from './pages/student/ProgramLibrary'
-// Note: Sessions and Profile pages don't exist yet - using StudentDashboard as placeholder
-// import Sessions from './pages/student/Sessions'
-// import Profile from './pages/student/Profile'
+import Profile from './pages/student/Profile'
+import Sessions from './pages/student/Sessions'
 import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
 import UnderstandLogic from './pages/student/UnderstandLogic'
@@ -71,8 +70,8 @@ export default function App() {
         }>
           <Route path='dashboard' element={<StudentDashboard user={user} />} />
           <Route path='programs' element={<ProgramLibrary />} />
-          <Route path='sessions' element={<StudentDashboard user={user} />} />
-          <Route path='profile' element={<StudentDashboard user={user} />} />
+          <Route path='sessions' element={<Sessions user={user} />} />
+          <Route path='profile' element={<Profile user={user} />} />
         </Route>
 
         {/* Student session routes - outside layout for fullscreen */}

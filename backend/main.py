@@ -8,6 +8,13 @@ from firebase_admin import credentials
 # Load environment variables FIRST
 load_dotenv()
 
+# Verify GROQ_API_KEY is loaded (masked for security)
+groq_key = os.getenv('GROQ_API_KEY')
+if groq_key:
+    print(f"✓ GROQ_API_KEY loaded: {groq_key[:10]}...{groq_key[-4:]}")
+else:
+    print("✗ WARNING: GROQ_API_KEY not found in environment!")
+
 # Initialize Firebase Admin SDK BEFORE importing routes
 if not firebase_admin._apps:
     firebase_key_path = os.getenv('FIREBASE_KEY_PATH', 'config/firebase_key.json')

@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ALGORITHM TAB - BEFORE vs AFTER
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              ❌ BEFORE (Verbose)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌───────────────────────────────────────────────────────────┐
+    │  ┌───┐                                                     │
+    │  │ 1 │  Start the program                                 │
+    │  └───┘                                                     │
+    │                                                            │
+    │  The program begins by starting up and getting ready      │
+    │  to run. This is the first step where everything is       │
+    │  initialized.                                             │
+    └────────────────────────────────────────────────────────────┘
+
+    ┌───────────────────────────────────────────────────────────┐
+    │  ┌───┐                                                     │
+    │  │ 2 │  Define the greeting message                       │
+    │  └───┘                                                     │
+    │                                                            │
+    │  A greeting message is defined, which will be printed     │
+    │  out to the screen later. This message is a sequence      │
+    │  of characters that make up the greeting.                 │
+    └────────────────────────────────────────────────────────────┘
+
+    ┌───────────────────────────────────────────────────────────┐
+    │  ┌───┐                                                     │
+    │  │ 3 │  Prepare the output                                │
+    │  └───┘                                                     │
+    │                                                            │
+    │  The program prepares to print the greeting message       │
+    │  to the screen. This involves setting up the output       │
+    │  mechanism to display the message.                        │
+    └────────────────────────────────────────────────────────────┘
+
+    [... 4 more verbose cards like this ...]
+
+
+Problems:
+- Takes up entire screen for 7 steps
+- Hard to scan - too much text
+- Doesn't look like an algorithm
+- Separate cards break the flow
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          ✅ AFTER (Compact Pseudocode)                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────┐
+    │                                                          │
+    │  ┌───┐  Start                                           │
+    │  │ 1 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    │  ┌───┐  Get user input                                  │
+    │  │ 2 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    │  ┌───┐  Calculate remainder                             │
+    │  │ 3 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    │  ┌───┐  If remainder is 0 → Even                        │
+    │  │ 4 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    │        ↳  Else → Odd                                    │
+    │                                                          │
+    │  ┌───┐  Display result                                  │
+    │  │ 6 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    │  ┌───┐  Stop                                            │
+    │  │ 7 │                                                   │
+    │  └───┘                                                   │
+    │                                                          │
+    └─────────────────────────────────────────────────────────┘
+
+
+Benefits:
+✓ All 7 steps fit in one card
+✓ Easy to scan - one line per step
+✓ Looks like pseudocode/algorithm
+✓ Branch logic properly indented
+✓ Clean, professional appearance
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                           REAL API OUTPUT EXAMPLE
+═══════════════════════════════════════════════════════════════════════════════
+
+Program: "Check Even or Odd"
+
+Backend Response (compact format):
+{
+  "steps": [
+    { "stepNumber": 1, "title": "Start", "isBranch": false },
+    { "stepNumber": 2, "title": "Get user input", "isBranch": false },
+    { "stepNumber": 3, "title": "Calculate remainder", "isBranch": false },
+    { "stepNumber": 4, "title": "If remainder is 0 → Even", "isBranch": false },
+    { "stepNumber": 5, "title": "Else → Odd", "isBranch": true },
+    { "stepNumber": 6, "title": "Display result", "isBranch": false },
+    { "stepNumber": 7, "title": "Stop", "isBranch": false }
+  ]
+}
+
+Frontend Rendering (exactly as users will see it):
+
+    ┌─────────────────────────────────────────────┐
+    │                                              │
+    │  [1] Start                                   │
+    │  [2] Get user input                          │
+    │  [3] Calculate remainder                     │
+    │  [4] If remainder is 0 → Even                │
+    │      ↳ Else → Odd                            │
+    │  [6] Display result                          │
+    │  [7] Stop                                    │
+    │                                              │
+    └─────────────────────────────────────────────┘
+
+Notice:
+- Step 5 ("Else → Odd") is indented with ↳ arrow
+- Each step is one concise line
+- Numbers are in teal rounded badges (28x28px)
+- Monospace/clean font for code-like appearance
+- Staggered fade-in animation maintained
+
+
+═══════════════════════════════════════════════════════════════════════════════

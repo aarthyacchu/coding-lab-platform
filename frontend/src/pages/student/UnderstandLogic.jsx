@@ -41,6 +41,7 @@ export default function UnderstandLogic() {
   // Feature 1: Algorithm in Words
   const [algorithmSteps, setAlgorithmSteps] = useState([])
   const [algorithmLoading, setAlgorithmLoading] = useState(false)
+  const [algorithmError, setAlgorithmError] = useState(null)
   const [visibleAlgorithmSteps, setVisibleAlgorithmSteps] = useState([])
   
   // Feature 2: Logic Flow Simulator
@@ -164,6 +165,7 @@ export default function UnderstandLogic() {
   async function loadPuzzleAndBlocks(prog) {
     setPuzzleLoading(true)
     setAlgorithmLoading(true)
+    setAlgorithmError(null)
     try {
       const result = await generateExplainer(
         prog.title,
@@ -212,6 +214,7 @@ export default function UnderstandLogic() {
       }
     } catch (err) {
       console.error('Failed to load explainer:', err)
+      setAlgorithmError(err.message)
       // Use fallback on error
       setPuzzleData({
         headline: `Crack the Logic: ${prog.title}`,
@@ -709,37 +712,58 @@ export default function UnderstandLogic() {
                 <div className='flex items-center justify-center py-12'>
                   <Loader2 className={`${t.accentText} animate-spin`} size={24} />
                 </div>
+              ) : algorithmError ? (
+                <div className={`${t.errorBg} border ${t.errorBorder} rounded-lg p-4`}>
+                  <div className='flex items-center gap-2 mb-2'>
+                    <AlertCircle className={t.errorText} size={20} />
+                    <p className={`${t.errorText} font-semibold`}>Failed to load algorithm</p>
+                  </div>
+                  <p className={`${t.textMuted} text-sm`}>{algorithmError}</p>
+                </div>
               ) : algorithmSteps.length === 0 ? (
                 <p className={t.textMuted}>No algorithm steps available</p>
               ) : (
-                <div className='space-y-4'>
-                  {algorithmSteps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className={`transition-all duration-500 ${
-                        visibleAlgorithmSteps.includes(idx)
-                          ? 'opacity-100 translate-y-0'
-                          : 'opacity-0 translate-y-4'
-                      }`}
-                    >
-                      <div className='flex items-start gap-3'>
-                        <div
-                          className={`${t.accentBg} text-white px-3 py-1 rounded-md text-sm font-mono font-bold flex-shrink-0`}
-                          style={{ borderRadius: '6px' }}
-                        >
-                          {step.stepNumber}
-                        </div>
-                        <div className='flex-1'>
-                          <h3 className='font-semibold text-base mb-1' style={{ fontFamily: 'Inter, sans-serif' }}>
+                <div className={`${t.inputBg} border ${t.inputBorder} rounded-lg p-6`}
+                     style={{ borderRadius: '12px' }}>
+                  <div className='space-y-2'>
+                    {algorithmSteps.map((step, idx) => (
+                      <div
+                        key={idx}
+                        className={`transition-all duration-500 ${
+                          visibleAlgorithmSteps.includes(idx)
+                            ? 'opacity-100 translate-y-0'
+                            : 'opacity-0 translate-y-4'
+                        }`}
+                      >
+                        <div className={`flex items-center gap-3 py-2 ${
+                          step.isBranch ? 'ml-10' : ''
+                        }`}>
+                          {step.isBranch ? (
+                            <div className='flex items-center gap-2 flex-shrink-0'>
+                              <span className={`${t.textMuted} text-sm`}>↳</span>
+                            </div>
+                          ) : (
+                            <div
+                              className={`${t.accentBg} text-white flex items-center justify-center
+                                         rounded-md text-sm font-bold flex-shrink-0`}
+                              style={{ 
+                                borderRadius: '6px',
+                                width: '28px',
+                                height: '28px',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {step.stepNumber}
+                            </div>
+                          )}
+                          <p className={`${t.text} text-base`}
+                             style={{ fontFamily: 'Inter, monospace' }}>
                             {step.title}
-                          </h3>
-                          <p className={`${t.textMuted} text-sm leading-relaxed`}>
-                            {step.narration}
                           </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

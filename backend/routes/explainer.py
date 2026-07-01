@@ -16,9 +16,10 @@ class ExplainerRequest(BaseModel):
 
 class ExplainerStep(BaseModel):
     stepNumber:  int
-    title:       str       # short label, e.g. 'Initialize base cases'
-    narration:   str       # what gets spoken aloud -- plain spoken English
+    title:       str       # single compact line (under 12 words), e.g. 'Take input from user'
+    narration:   str       # what gets spoken aloud -- plain spoken English (optional for voice)
     visualHint:  str       # one of: 'input' | 'loop' | 'condition' | 'compute' | 'output'
+    isBranch:    bool = False  # True for Else-branches that should be indented
 
 class ExplainerResponse(BaseModel):
     steps: List[ExplainerStep]
@@ -42,27 +43,82 @@ class FlowchartResponse(BaseModel):
 
 
 EXPLAINER_SYSTEM_PROMPT = """
-You are a programming tutor creating a step-by-step LOGIC walkthrough
+You are a programming tutor creating a COMPACT PSEUDOCODE-STYLE algorithm walkthrough
 for a college student, before they write any code.
 
 STRICT RULES:
 1. NEVER include actual code or syntax of any language.
 2. Explain ALGORITHM LOGIC ONLY -- what happens conceptually, in order.
 3. Produce between 4 and 7 steps. Not more, not fewer.
-4. Each narration line should sound natural when spoken aloud --
-   short sentences, no symbols, no code-like notation.
-5. visualHint must be exactly one of: input, loop, condition, compute, output
-   -- pick whichever best matches what that step represents conceptually.
-6. Return ONLY valid JSON, no markdown fences, no commentary.
+4. Each step's "title" must be ONE SHORT LINE (under 12 words) like pseudocode.
+   Examples: "Start", "Take input from user", "Divide number by 2", "Stop"
+5. The "narration" field is for optional voice narration (keep it conversational),
+   but the main display uses ONLY the "title" field — make it concise!
+6. For conditional/branching logic:
+   - Format If-steps as: "If <condition> → <outcome>"
+   - Format Else-steps as: "Else → <outcome>" with isBranch: true
+   - Else-steps will be indented in the UI, so don't include "Else if" as a separate If — 
+     just chain them as separate steps with isBranch.
+7. visualHint must be exactly one of: input, loop, condition, compute, output
+8. Return ONLY valid JSON, no markdown fences, no commentary.
+
+EXAMPLE for "Check if number is even or odd":
+{
+  "steps": [
+    {
+      "stepNumber": 1,
+      "title": "Start",
+      "narration": "Begin the algorithm",
+      "visualHint": "input",
+      "isBranch": false
+    },
+    {
+      "stepNumber": 2,
+      "title": "Take input from the user",
+      "narration": "Get a number from the user to check",
+      "visualHint": "input",
+      "isBranch": false
+    },
+    {
+      "stepNumber": 3,
+      "title": "Divide the number by 2",
+      "narration": "Perform division to check for remainder",
+      "visualHint": "compute",
+      "isBranch": false
+    },
+    {
+      "stepNumber": 4,
+      "title": "If remainder is 0 → Even",
+      "narration": "If there's no remainder, the number is even",
+      "visualHint": "condition",
+      "isBranch": false
+    },
+    {
+      "stepNumber": 5,
+      "title": "Else → Odd",
+      "narration": "Otherwise the number is odd",
+      "visualHint": "condition",
+      "isBranch": true
+    },
+    {
+      "stepNumber": 6,
+      "title": "Stop",
+      "narration": "End the algorithm",
+      "visualHint": "output",
+      "isBranch": false
+    }
+  ]
+}
 
 JSON format:
 {
   "steps": [
     {
       "stepNumber": 1,
-      "title": "short label",
-      "narration": "one or two spoken sentences",
-      "visualHint": "input"
+      "title": "compact pseudocode line here",
+      "narration": "optional spoken explanation",
+      "visualHint": "input",
+      "isBranch": false
     }
   ]
 }

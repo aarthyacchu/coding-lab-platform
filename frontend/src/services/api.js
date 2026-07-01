@@ -84,7 +84,14 @@ export async function generateExplainer(programTitle, programDesc, concepts) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ programTitle, programDesc, concepts })
   })
-  if (!res.ok) throw new Error('Explainer generation failed')
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      const err = await res.json()
+      detail = err.detail || detail
+    } catch (_) {}
+    throw new Error(detail)
+  }
   return res.json()   // { steps: [...] }
 }
 
@@ -95,7 +102,14 @@ export async function askChatbot(programTitle, programDesc, concepts, history, q
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ programTitle, programDesc, concepts, history, question })
   })
-  if (!res.ok) throw new Error('Chatbot request failed')
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      const err = await res.json()
+      detail = err.detail || detail
+    } catch (_) {}
+    throw new Error(detail)
+  }
   return res.json()   // { answer: string }
 }
 
@@ -135,8 +149,12 @@ export async function generateFlowchart(programTitle, programDesc, concepts, sta
     body: JSON.stringify({ programTitle, programDesc, concepts, starterCode })
   })
   if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.detail || 'Failed to generate flowchart')
+    let detail = `HTTP ${res.status}`
+    try {
+      const err = await res.json()
+      detail = err.detail || detail
+    } catch (_) {}
+    throw new Error(detail)
   }
   return res.json()   // { nodes: [...], variables: [...] }
 }
