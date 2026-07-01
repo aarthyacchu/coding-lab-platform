@@ -10,6 +10,7 @@ import Landing from './pages/Landing'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
 import StudentLayout from './layouts/StudentLayout'
+import TeacherLayout from './layouts/TeacherLayout'
 import StudentDashboard from './pages/student/StudentDashboard'
 import ProgramLibrary from './pages/student/ProgramLibrary'
 import Profile from './pages/student/Profile'
@@ -18,6 +19,7 @@ import Session from './pages/student/Session'
 import Quiz from './pages/student/Quiz'
 import UnderstandLogic from './pages/student/UnderstandLogic'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
+import TeacherProfile from './pages/teacher/Profile'
 import StudentReport from './pages/teacher/StudentReport'
 import ClassAnalytics from './pages/teacher/ClassAnalytics'
 import UploadProgram from './pages/teacher/UploadProgram'
@@ -91,25 +93,22 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {/* Teacher routes */}
-        <Route path='/teacher/dashboard' element={
+        {/* Teacher routes - wrapped in TeacherLayout */}
+        <Route path='/teacher' element={
           <ProtectedRoute user={user} role={role} requiredRole='teacher'>
-            <TeacherDashboard user={user} />
+            <TeacherLayout user={user} />
           </ProtectedRoute>
-        } />
-        <Route path='/teacher/upload-program' element={
-          <ProtectedRoute user={user} role={role} requiredRole='teacher'>
-            <UploadProgram />
-          </ProtectedRoute>
-        } />
+        }>
+          <Route path='dashboard' element={<TeacherDashboard user={user} />} />
+          <Route path='programs' element={<UploadProgram />} />
+          <Route path='analytics' element={<ClassAnalytics />} />
+          <Route path='profile' element={<TeacherProfile user={user} />} />
+        </Route>
+
+        {/* Teacher report route - outside layout for fullscreen */}
         <Route path='/teacher/report/:sessionId' element={
           <ProtectedRoute user={user} role={role} requiredRole='teacher'>
             <StudentReport />
-          </ProtectedRoute>
-        } />
-        <Route path='/teacher/analytics' element={
-          <ProtectedRoute user={user} role={role} requiredRole='teacher'>
-            <ClassAnalytics />
           </ProtectedRoute>
         } />
 
