@@ -1,5 +1,5 @@
 # backend/routes/explain.py
-# Logic explanation endpoints for "Understand the logic" page
+# Logic explanation endpoints with execution trace generation
 
 import os
 import json
@@ -7,7 +7,7 @@ import re
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from groq import Groq
-from typing import List
+from typing import List, Dict, Any
 
 router = APIRouter()
 groq_client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
@@ -22,6 +22,11 @@ class ExplainLogicRequest(BaseModel):
     starterCode: str
 
 
+class ExecuteTraceRequest(BaseModel):
+    code: str
+    language: str = 'python'
+
+
 class AskAboutProgramRequest(BaseModel):
     programTitle: str
     programDesc: str
@@ -34,7 +39,6 @@ class AskAboutProgramRequest(BaseModel):
 def extract_json(text: str) -> dict:
     """
     Extract JSON from Groq response, handling markdown code fences.
-    Same pattern as quiz.py.
     """
     text = text.strip()
     
@@ -50,6 +54,76 @@ def extract_json(text: str) -> dict:
         return json.loads(text)
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse JSON: {str(e)}")
+
+
+# ── POST /explain/execute ───────────────────────────────────────
+
+@router.post('/explain/execute')
+def generate_execution_trace(req: ExecuteTraceRequest):
+    """
+    Generate a line-by-line execution trace for visual step-through.
+    Returns array of steps with line number, variables, output, and explanation.
+    
+    This is the Log2Base2-style visual execution engine backend.
+    """
+    
+    system_prompt = """You are a code execution analyzer that generates step-by-step execution traces.
+
+Your task: Analyze the provided code and generate a detailed execution trace showing how the program runs line-by-line.
+
+Return ONLY valid JSON in this exact format:
+{
+  "trace": [
+    {
+      "line": 1,
+      "code": "n = int(input('Enter number: '))",
+      "variables": {"n": 5},
+      "output": "",
+      "explanation": "User entered 5, stored in variable n"
+    }
+  ]
+}
+
+RULES:
+- Include every significant step of execution
+- Show variable states after each line executes
+- For loops, show each iteration as separate steps
+- Include explanations that help students understand what's happening
+- Keep explanations concise (1-2 sentences)
+- Show console output when print statements execute
+- Variable values should be actual values, not types"""
+
+    user_prompt = f"""Generate an execution trace for this code:
+
+```{req.language}
+{req.code}
+```
+
+Assume typical input values and trace through complete execution.
+Return the trace as JSON."""
+
+    try:
+        completion = groq_client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.3,
+        )
+        
+        response_text = completion.choices[0].message.content.strip()
+        result = extract_json(response_text)
+        
+        # Validate structure
+        if 'trace' not in result or not isinstance(result['trace'], list):
+            raise HTTPException(status_code=500, detail="Invalid trace structure from AI")
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate execution trace: {str(e)}")
 
 
 # ── POST /explain/logic ─────────────────────────────────────────

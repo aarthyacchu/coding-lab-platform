@@ -1,5 +1,5 @@
 // frontend/src/pages/student/StudentDashboard.jsx
-// Energetic, gamified dashboard inspired by Duolingo/fitness apps
+// Log2Base2-style interactive learning dashboard with visual learning paths
 
 import { useEffect, useState, useRef } from 'react'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
@@ -7,8 +7,52 @@ import { useNavigate } from 'react-router-dom'
 import { db } from '../../services/firebase'
 import BadgeGrid from '../../components/BadgeGrid'
 import StreakHeatmap from '../../components/StreakHeatmap'
-import { Flame, Medal, BookOpen, ChevronRight, Trophy, Sparkles, Terminal } from 'lucide-react'
+import { Flame, Medal, BookOpen, ChevronRight, Trophy, Sparkles, Terminal, Lock, CheckCircle, Code2, Brain, Database, GitBranch, Layers } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
+
+// Mock data for visual learning modules (Log2Base2-style)
+const LEARNING_MODULES = [
+  {
+    id: 'module-1',
+    title: 'Memory Visualization',
+    description: 'Learn how variables are stored in memory',
+    icon: Brain,
+    color: 'from-blue-500 to-cyan-500',
+    lessons: 5,
+    status: 'completed',
+    progress: 100
+  },
+  {
+    id: 'module-2',
+    title: 'Control Flow Basics',
+    description: 'Master if-else and loops visually',
+    icon: GitBranch,
+    color: 'from-purple-500 to-pink-500',
+    lessons: 7,
+    status: 'in-progress',
+    progress: 57
+  },
+  {
+    id: 'module-3',
+    title: 'Data Structures',
+    description: 'Visualize arrays, lists, and stacks',
+    icon: Database,
+    color: 'from-green-500 to-teal-500',
+    lessons: 8,
+    status: 'locked',
+    progress: 0
+  },
+  {
+    id: 'module-4',
+    title: 'Algorithms',
+    description: 'See sorting and searching in action',
+    icon: Layers,
+    color: 'from-orange-500 to-red-500',
+    lessons: 6,
+    status: 'locked',
+    progress: 0
+  }
+]
 
 export default function StudentDashboard({ user }) {
   const [profile, setProfile] = useState(null)
@@ -448,6 +492,125 @@ export default function StudentDashboard({ user }) {
           
           <BadgeGrid earnedBadges={profile?.badges || []} theme={theme} currentStreak={profile?.streak ?? 0} />
         </div>
+        {/* VISUAL LEARNING PATH - Log2Base2-style module progression */}
+        <div 
+          className={`rounded-lg border ${t.border} p-5 mb-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                     ${isVisible('badges') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          style={{
+            backgroundColor: t.cardBg,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: theme === 'dark'
+              ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+              : '0 1px 3px rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <div className='flex items-center gap-2 mb-5'>
+            <Code2 size={14} className={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} />
+            <h2 className={`text-sm font-medium ${t.text}`}>Visual Learning Path</h2>
+          </div>
+
+          <div className='space-y-3'>
+            {LEARNING_MODULES.map((module, index) => {
+              const Icon = module.icon
+              const isLocked = module.status === 'locked'
+              const isCompleted = module.status === 'completed'
+              const isActive = module.status === 'in-progress'
+
+              return (
+                <div
+                  key={module.id}
+                  className={`relative rounded-lg p-4 border transition-all duration-300
+                             ${isLocked 
+                               ? `${t.border} opacity-50 cursor-not-allowed`
+                               : `${theme === 'dark' ? 'border-white/10 hover:border-white/20' : 'border-gray-200 hover:border-gray-300'} cursor-pointer hover:shadow-md`
+                             }`}
+                  style={{
+                    background: isLocked 
+                      ? t.cardBg
+                      : `linear-gradient(135deg, ${theme === 'dark' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.05)'} 0%, transparent 100%)`
+                  }}
+                  onClick={() => !isLocked && navigate(`/student/learn/${module.id}`)}
+                >
+                  {/* Connecting line to next module */}
+                  {index < LEARNING_MODULES.length - 1 && (
+                    <div 
+                      className='absolute left-8 top-full h-3 w-0.5 z-0'
+                      style={{
+                        background: theme === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.1)' 
+                          : 'rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                  )}
+
+                  <div className='flex items-start gap-4'>
+                    {/* Icon circle */}
+                    <div 
+                      className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center relative z-10
+                                 ${isCompleted 
+                                   ? 'bg-green-500/20' 
+                                   : isActive 
+                                     ? `bg-gradient-to-br ${module.color}` 
+                                     : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                                 }`}
+                    >
+                      {isLocked ? (
+                        <Lock size={20} className='text-gray-500' />
+                      ) : isCompleted ? (
+                        <CheckCircle size={20} className='text-green-400' />
+                      ) : (
+                        <Icon size={20} className='text-white' />
+                      )}
+                    </div>
+
+                    {/* Module info */}
+                    <div className='flex-1'>
+                      <div className='flex items-start justify-between mb-1'>
+                        <div>
+                          <h3 className={`font-semibold text-sm ${t.text} mb-0.5`}>
+                            {module.title}
+                          </h3>
+                          <p className={`text-xs ${t.textMuted}`}>
+                            {module.description}
+                          </p>
+                        </div>
+                        {!isLocked && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                                          ${isCompleted 
+                                            ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                                            : isActive
+                                              ? theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700'
+                                              : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-600'
+                                          }`}>
+                            {isCompleted ? 'Done' : `${module.lessons} lessons`}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Progress bar */}
+                      {!isLocked && module.progress > 0 && (
+                        <div className='mt-2'>
+                          <div className={`h-1.5 rounded-full overflow-hidden
+                                         ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`}>
+                            <div 
+                              className={`h-full bg-gradient-to-r ${module.color} transition-all duration-500`}
+                              style={{ width: `${module.progress}%` }}
+                            />
+                          </div>
+                          <p className={`text-xs ${t.textMuted} mt-1`}>
+                            {module.progress}% complete
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* BOTTOM CTA - Clean, professional */}
         <div 
           ref={ctaRef}
