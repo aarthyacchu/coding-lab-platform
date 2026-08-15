@@ -45,7 +45,10 @@ export default function StudentDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/student/${studentId}/timeline`)
+        const apiBase = import.meta.env.VITE_API_BASE_URL 
+          ? `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')}/api` 
+          : '/api'
+        const res = await fetch(`${apiBase}/student/${studentId}/timeline`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         setData(await res.json())
       } catch (e) {

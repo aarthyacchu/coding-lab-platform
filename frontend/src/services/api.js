@@ -1,9 +1,11 @@
 // frontend/src/services/api.js
-// Base URL is /api — Vite proxies this to http://localhost:8000
-const BASE = '/api'
+// Reads VITE_API_BASE_URL from environment variables in production, or defaults to '/api' for Vite dev proxy
+const API_BASE = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')}/api` 
+  : '/api'
 
 export async function submitSession(sessionData) {
-  const res = await fetch(`${BASE}/session/submit`, {
+  const res = await fetch(`${API_BASE}/session/submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sessionData)
@@ -13,7 +15,7 @@ export async function submitSession(sessionData) {
 }
 
 export async function runCode(code, language) {
-  const res = await fetch(`${BASE}/session/run`, {
+  const res = await fetch(`${API_BASE}/session/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, language })
@@ -23,7 +25,7 @@ export async function runCode(code, language) {
 }
 
 export async function getHint(programId, programTitle, programDesc, concepts, userCode, hintNumber) {
-  const res = await fetch('/api/hints/ask', {
+  const res = await fetch(`${API_BASE}/hints/ask`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -43,7 +45,7 @@ export async function getHint(programId, programTitle, programDesc, concepts, us
 }
 
 export async function generateQuiz(programTitle, programDesc, concepts, studentCode) {
-  const res = await fetch('/api/quiz/generate', {
+  const res = await fetch(`${API_BASE}/quiz/generate`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -62,7 +64,7 @@ export async function generateQuiz(programTitle, programDesc, concepts, studentC
 
 // Day 8: Run code against test cases
 export async function runTests(code, testCases) {
-  const res = await fetch('/api/session/run-tests', {
+  const res = await fetch(`${API_BASE}/session/run-tests`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, language: 'python', testCases })
@@ -73,7 +75,7 @@ export async function runTests(code, testCases) {
 
 // Day 9: Generate animated logic explainer
 export async function generateExplainer(programTitle, programDesc, concepts) {
-  const res = await fetch('/api/explainer/generate', {
+  const res = await fetch(`${API_BASE}/explainer/generate`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ programTitle, programDesc, concepts })
@@ -91,7 +93,7 @@ export async function generateExplainer(programTitle, programDesc, concepts) {
 
 // Day 9: Ask chatbot about program logic
 export async function askChatbot(programTitle, programDesc, concepts, history, question) {
-  const res = await fetch('/api/chatbot/ask', {
+  const res = await fetch(`${API_BASE}/chatbot/ask`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ programTitle, programDesc, concepts, history, question })
@@ -109,7 +111,7 @@ export async function askChatbot(programTitle, programDesc, concepts, history, q
 
 // Generate flowchart: Get flowchart nodes for visual flow simulator
 export async function generateFlowchart(programTitle, programDesc, concepts, starterCode) {
-  const res = await fetch('/api/explainer/flowchart', {
+  const res = await fetch(`${API_BASE}/explainer/flowchart`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ programTitle, programDesc, concepts, starterCode })
@@ -127,7 +129,7 @@ export async function generateFlowchart(programTitle, programDesc, concepts, sta
 
 // Fetch program submission statistics and DICE model evaluation reports
 export async function getProgramSubmissionsReport(programId) {
-  const res = await fetch(`/api/reports/program/${programId}/submissions`)
+  const res = await fetch(`${API_BASE}/reports/program/${programId}/submissions`)
   if (!res.ok) {
     let detail = `HTTP ${res.status}`
     try {
@@ -141,7 +143,7 @@ export async function getProgramSubmissionsReport(programId) {
 
 // Trigger DICE report evaluation pipeline for a program on demand
 export async function generateProgramReport(programId) {
-  const res = await fetch(`/api/reports/program/${programId}/generate`, {
+  const res = await fetch(`${API_BASE}/reports/program/${programId}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
   })
@@ -155,4 +157,3 @@ export async function generateProgramReport(programId) {
   }
   return res.json()
 }
-
